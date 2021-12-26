@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/AddAccount.qml</file>
+        <file>qml/MainWindow.qml</file>
+        <file>qml/MessageItemDelegate.qml</file>
+        <file>qml/MessageList.qml</file>
+        <file>qml/SideBar.qml</file>
+        <file>qml/MessageView.qml</file>
+    </qresource>
+</RCC>
