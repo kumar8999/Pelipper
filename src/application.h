@@ -1,11 +1,12 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-#include "folderlistmodel.h"
-#include "messageitem.h"
-#include "messagelistmodel.h"
-#include "settings.h"
-#include "sortmodel.h"
+#include "backend/session.h"
+#include "backend/settings.h"
+#include "folderview/folderlistmodel.h"
+#include "messagelistview/messagelistmodel.h"
+#include "messagelistview/sortmodel.h"
+#include "messageview/messageitem.h"
 
 #include <QObject>
 
@@ -14,13 +15,14 @@ class Application : public QObject
     Q_OBJECT
 
     Q_PROPERTY(bool isAccountInit READ isAccountInit WRITE setIsAccountInit NOTIFY isAccountInitChanged)
-    Q_PROPERTY(MessageItem *message READ message WRITE setMessage NOTIFY messageChanged)
-    Q_PROPERTY(bool hasMsgInited READ hasMsgInited WRITE setHasMsgInited NOTIFY hasMsgInitedChanged)
+    Q_PROPERTY(FolderListModel *folderListModel READ folderListModel WRITE setfolderListModel NOTIFY folderListModelChanged)
+    Q_PROPERTY(bool hasMsgLoaded READ hasMsgLoaded WRITE setHasMsgLoaded NOTIFY hasMsgLoadedChanged)
     Q_PROPERTY(SortModel *messageListModel READ messageListModel WRITE setMessageListModel NOTIFY messageListModelChanged)
-    Q_PROPERTY(FolderListModel *folderListModel READ folderListModel WRITE setFolderListModel NOTIFY folderListModelChanged)
+    Q_PROPERTY(MessageItem *messageItem READ messageItem WRITE setMessageItem NOTIFY messageItemChanged)
 
 public:
-    explicit Application(QObject *parent = nullptr);
+    Application(QObject *parent = nullptr);
+    ~Application();
 
     FolderListModel *folderListModel() const;
     void setfolderListModel(FolderListModel *newFolderListModel);
@@ -28,46 +30,55 @@ public:
     bool isAccountInit() const;
     void setIsAccountInit(bool newIsAccountInit);
 
-    void setFolderListModel(FolderListModel *newFolderListModel);
-
-    bool hasMsgInited() const;
-    void setHasMsgInited(bool newHasMsgInited);
-
-    MessageItem *message() const;
-    void setMessage(MessageItem *newMessage);
+    bool hasMsgLoaded() const;
+    void setHasMsgLoaded(bool newHasMsgLoaded);
 
     SortModel *messageListModel() const;
     void setMessageListModel(SortModel *newMessageListModel);
 
+    MessageItem *messageItem() const;
+    void setMessageItem(MessageItem *newMessageItem);
+
+    Q_INVOKABLE void selectedMessage(QString accountEmail, int uid);
+
 public slots:
-    void selectedMessage(QString email, long uid);
+    void addAccount(const QString &username,
+                    const QString &email,
+                    const QString &password,
+                    const QString &imapServer,
+                    const int &imapPort,
+                    const QString &smtpServer,
+                    const int &smtpPort);
 
 signals:
     void folderListModelChanged();
 
     void isAccountInitChanged();
 
-    void htmlChanged();
+    void connectionSuccessFul(bool isOk);
 
-    void hasMsgInitedChanged();
+    void loginSuccessFul(bool isOk);
 
-    void messageChanged();
+    void hasMsgLoadedChanged();
 
     void messageListModelChanged();
+
+    void messageItemChanged();
+
+    void messageReadReady(Message *msg);
 
 private:
     void loadAccounts();
 
 private:
-    FolderListModel *m_folderListModel;
     bool m_isAccountInit;
+    bool m_hasMsgLoaded;
+
     Settings *m_Settings;
 
+    FolderListModel *m_folderListModel;
     SortModel *m_messageListModel;
-
-    QMap<QString, Account *> m_Accounts;
-    MessageItem *m_message;
-    bool m_hasMsgInited;
+    MessageItem *m_messageItem;
 };
 
 #endif // APPLICATION_H

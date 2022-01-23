@@ -4,9 +4,9 @@ import QtQuick.Layouts 1.12
 import org.kde.kirigami 2.13 as Kirigami
 
 TreeView {
+    id: treeView
     Layout.fillHeight: true
     Layout.fillWidth: true
-    id: treeView
     headerVisible: false
     model: session.folderListModel
 
@@ -19,12 +19,9 @@ TreeView {
         session.folderListModel.selectFolder(index)
     }
 
-    Kirigami.PlaceholderMessage {
+    BusyIndicator {
         anchors.centerIn: parent
-        width: parent.width
-
         visible: session.folderListModel.loading
-        text: "loading..."
     }
 
     MouseArea {

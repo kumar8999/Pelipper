@@ -1,5 +1,0 @@
-/home/kumar/Projects/Pelipper/build/CMakeFiles/KF5I18n_QCH.dir
-/home/kumar/Projects/Pelipper/build/CMakeFiles/Pelipper.dir
-/home/kumar/Projects/Pelipper/build/CMakeFiles/edit_cache.dir
-/home/kumar/Projects/Pelipper/build/CMakeFiles/rebuild_cache.dir
-/home/kumar/Projects/Pelipper/build/CMakeFiles/Pelipper_autogen.dir

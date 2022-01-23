@@ -34,18 +34,11 @@ Kirigami.ApplicationWindow {
                 onTriggered: Qt.quit()
             }
         }
+
         Menu {
             title: qsTr("&Edit")
-            Action {
-                text: qsTr("Cu&t")
-            }
-            Action {
-                text: qsTr("&Copy")
-            }
-            Action {
-                text: qsTr("&Paste")
-            }
         }
+
         Menu {
             title: qsTr("&Help")
             Action {

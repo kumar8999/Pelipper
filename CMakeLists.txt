@@ -32,23 +32,22 @@ find_package(KF5I18n)
 
 
 set(PROJECT_SOURCES
-    src/session.h src/session.cpp
-    src/account.h src/account.cpp
-    src/imap.h src/imap.cpp
-    src/folderlistmodel.h src/folderlistmodel.cpp
-    src/messagelistmodel.h src/messagelistmodel.cpp
-    src/message.h src/message.cpp
-    src/messageitem.h src/messageitem.cpp
-    src/folder.h src/folder.cpp
-    src/folderitem.h src/folderitem.cpp
-    src/accountitem.h src/accountitem.cpp
-    src/contact.h src/contact.cpp
-    src/settings.h src/settings.cpp
-    src/basefolderitem.h src/basefolderitem.cpp
-    src/imapcache.h src/imapcache.cpp
-    src/sortmodel.h src/sortmodel.cpp
+    src/messageview/messageitem.h src/messageview/messageitem.cpp
+    src/messagelistview/sortmodel.h src/messagelistview/sortmodel.cpp
+    src/messagelistview/roles.h
+    src/messagelistview/messagelistmodel.h src/messagelistview/messagelistmodel.cpp
+    src/folderview/folderitem.h src/folderview/folderitem.cpp
+    src/folderview/accountitem.h src/folderview/accountitem.cpp
+    src/folderview/basefolderitem.h src/folderview/basefolderitem.cpp
+    src/folderview/folderlistmodel.h src/folderview/folderlistmodel.cpp
+    src/backend/contact.h src/backend/contact.cpp
+    src/backend/message.h src/backend/message.cpp
+    src/backend/folder.h src/backend/folder.cpp
+    src/backend/imapservice.h src/backend/imapservice.cpp
+    src/backend/account.h src/backend/account.cpp
+    src/backend/session.h src/backend/session.cpp
+    src/backend/settings.h src/backend/settings.cpp
     src/application.h src/application.cpp
-    src/roles.h
     src/main.cpp
     src/qml.qrc
 )

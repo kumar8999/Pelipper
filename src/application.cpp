@@ -1,42 +1,45 @@
 #include "application.h"
 
-#include "roles.h"
-#include "session.h"
+#include <QtConcurrent>
 
 Application::Application(QObject *parent)
     : m_isAccountInit(false)
-    , m_hasMsgInited(false)
+    , m_messageItem(nullptr)
+    , m_hasMsgLoaded(false)
     , QObject(parent)
 {
     m_Settings = new Settings(this);
     m_folderListModel = new FolderListModel(this);
-    m_messageListModel = new SortModel(this);
     MessageListModel *_messageListModel = new MessageListModel(this);
+
+    m_messageListModel = new SortModel(this);
     m_messageListModel->setSourceModel(_messageListModel);
     m_messageListModel->setSortRole(Roles::DateRole);
-    m_messageListModel->setDynamicSortFilter(true);
     m_messageListModel->sort(0, Qt::DescendingOrder);
 
-    connect(_messageListModel, &MessageListModel::loadingChanged, m_messageListModel, &SortModel::onLoadingChanged);
-
-    connect(_messageListModel, &MessageListModel::messageLoading, this, [=]() {
-        //                auto _temp = static_cast<MessageListFilter *>(m_messageListModel);
-        //                _temp->setMessageLoading(true);
+    connect(m_folderListModel, &FolderListModel::folderSelected, _messageListModel, &MessageListModel::onFolderSelected);
+    connect(this, &Application::messageReadReady, this, [=](Message *msg) {
+        setMessageItem(new MessageItem(msg, this));
+        setHasMsgLoaded(true);
     });
-
-    connect(_messageListModel, &MessageListModel::messageLoadingFinished, this, [=]() {
-        //        auto _temp = static_cast<MessageListFilter *>(m_messageListModel);
-        //        _temp->setMessageLoading(false);
-    });
-    m_message = new MessageItem(this);
-    setHasMsgInited(false);
-
     loadAccounts();
+}
+
+Application::~Application()
+{
 }
 
 FolderListModel *Application::folderListModel() const
 {
     return m_folderListModel;
+}
+
+void Application::setfolderListModel(FolderListModel *newFolderListModel)
+{
+    if (m_folderListModel == newFolderListModel)
+        return;
+    m_folderListModel = newFolderListModel;
+    emit folderListModelChanged();
 }
 
 bool Application::isAccountInit() const
@@ -65,13 +68,37 @@ void Application::loadAccounts()
         QString smtpServer;
         int smtpPort;
         bool isOK = m_Settings->getAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
-        if (isOK) {
-            Account *account = new Account(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
-            Session::getInstance()->addAccount(account);
-            setIsAccountInit(true);
-            m_Accounts.insert(email, account);
+
+        Account *account = new Account(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
+        ImapService *accountService = account->IMAPService();
+
+        bool result = accountService->connect();
+
+        if (result) {
+            emit connectionSuccessFul(true);
+
+            result = accountService->login();
+            if (result) {
+                Session::getInstance()->addAccount(account);
+                setIsAccountInit(true);
+            }
+        } else {
+            emit connectionSuccessFul(false);
         }
     }
+}
+
+MessageItem *Application::messageItem() const
+{
+    return m_messageItem;
+}
+
+void Application::setMessageItem(MessageItem *newMessageItem)
+{
+    if (m_messageItem == newMessageItem)
+        return;
+    m_messageItem = newMessageItem;
+    emit messageItemChanged();
 }
 
 SortModel *Application::messageListModel() const
@@ -87,52 +114,59 @@ void Application::setMessageListModel(SortModel *newMessageListModel)
     emit messageListModelChanged();
 }
 
-void Application::setFolderListModel(FolderListModel *newFolderListModel)
+void Application::selectedMessage(QString accountEmail, int uid)
 {
-    if (m_folderListModel == newFolderListModel)
+    QtConcurrent::run([=]() {
+        qDebug() << "selected messaged";
+        Session *session = Session::getInstance();
+        Account *account = session->getAccount(accountEmail);
+
+        qDebug() << accountEmail;
+
+        ImapService *imapService = account->IMAPService();
+
+        Message *msg = imapService->getBody(uid);
+
+        emit messageReadReady(msg);
+    });
+}
+
+bool Application::hasMsgLoaded() const
+{
+    return m_hasMsgLoaded;
+}
+
+void Application::setHasMsgLoaded(bool newHasMsgLoaded)
+{
+    if (m_hasMsgLoaded == newHasMsgLoaded)
         return;
-    m_folderListModel = newFolderListModel;
-    emit folderListModelChanged();
+    m_hasMsgLoaded = newHasMsgLoaded;
+    emit hasMsgLoadedChanged();
 }
 
-void Application::selectedMessage(QString email, long uid)
+void Application::addAccount(const QString &username,
+                             const QString &email,
+                             const QString &password,
+                             const QString &imapServer,
+                             const int &imapPort,
+                             const QString &smtpServer,
+                             const int &smtpPort)
 {
-    Account *account = m_Accounts.value(email);
+    Account *account = new Account(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
+    ImapService *accountService = account->IMAPService();
 
-    QString data;
-    account->getBody(uid, data);
+    bool result = accountService->connect();
 
-    Message *msg = new Message(email, uid, this);
-    msg->setBodyData(data);
-    MessageItem *_message = new MessageItem(this);
-    _message->setMessage(msg);
-    setMessage(_message);
-}
+    if (result) {
+        emit connectionSuccessFul(true);
 
-bool Application::hasMsgInited() const
-{
-    return m_hasMsgInited;
-}
-
-void Application::setHasMsgInited(bool newHasMsgInited)
-{
-    if (m_hasMsgInited == newHasMsgInited)
-        return;
-    m_hasMsgInited = newHasMsgInited;
-    emit hasMsgInitedChanged();
-}
-
-MessageItem *Application::message() const
-{
-    return m_message;
-}
-
-void Application::setMessage(MessageItem *newMessage)
-{
-    if (m_message == newMessage)
-        return;
-
-    m_message = newMessage;
-    setHasMsgInited(true);
-    emit messageChanged();
+        result = accountService->login();
+        if (result) {
+            Session::getInstance()->addAccount(account);
+            m_Settings->saveAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
+            setIsAccountInit(true);
+        }
+    } else {
+        emit connectionSuccessFul(false);
+    }
 }

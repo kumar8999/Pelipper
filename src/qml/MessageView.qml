@@ -9,52 +9,62 @@ Kirigami.Page {
     Kirigami.Theme.colorSet: Kirigami.Theme.View
 
     header: Controls.Pane {
-        visible: session.hasMsgInited
+        visible: session.hasMsgLoaded
         Kirigami.Theme.colorSet: Kirigami.Theme.Window
+
         ColumnLayout {
 
             Kirigami.FormLayout {
                 Layout.leftMargin: Kirigami.Units.gridUnit
+
                 Controls.Label {
+                    id: fromLabel
                     Kirigami.FormData.label: qsTr("From:")
-                    text: session.message.from
-                }
-                Controls.Label {
-                    Kirigami.FormData.label: qsTr("To:")
-                    text: session.message.to
                 }
 
                 Controls.Label {
-                    Kirigami.FormData.label: qsTr("Date:")
-                    text: session.message.datetime.toLocaleDateString()
+                    id: toLabel
+                    Kirigami.FormData.label: qsTr("To:")
                 }
+
                 Controls.Label {
+                    id: dateLabel
+                    Kirigami.FormData.label: qsTr("Date:")
+                }
+
+                Controls.Label {
+                    id: subjectLabel
                     Kirigami.FormData.label: qsTr("Subject:")
-                    text: session.message.subject
                 }
             }
         }
     }
 
     WebView {
-        visible: session.hasMsgInited
-        id: webView
+        visible: session.hasMsgLoaded
+        id: msgWebView
         Layout.fillWidth: true
         anchors.fill: parent
-
-        function setHtml() {
-            webView.loadHtml(session.message.content, "")
-        }
-
-        Component.onCompleted: {
-            session.messageChanged.connect(setHtml)
-        }
     }
 
     Kirigami.Heading {
-        visible: !session.hasMsgInited
+        visible: !session.hasMsgLoaded
         level: 2
         anchors.centerIn: parent
         text: "No Message Selected"
+    }
+
+    function onMessageReady() {
+        console.log(session.messageItem.from)
+        console.log(session.messageItem.subject)
+        fromLabel.text = session.messageItem.from
+        toLabel.text = session.messageItem.to
+        dateLabel.text = session.messageItem.datetime.toLocaleDateString()
+        subjectLabel.text = session.messageItem.subject
+        msgWebView.loadHtml(session.messageItem.html, "")
+    }
+
+    Component.onCompleted: {
+        session.messageItemChanged.connect(onMessageReady)
     }
 }

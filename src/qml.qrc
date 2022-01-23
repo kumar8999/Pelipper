@@ -7,5 +7,6 @@
         <file>qml/MessageList.qml</file>
         <file>qml/SideBar.qml</file>
         <file>qml/MessageView.qml</file>
+        <file>qml/FolderListModal.qml</file>
     </qresource>
 </RCC>
