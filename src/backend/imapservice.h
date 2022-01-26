@@ -2,6 +2,7 @@
 #define IMAP_H
 
 #include "folder.h"
+#include "imapcache.h"
 #include "message.h"
 
 #include <QMap>
@@ -25,12 +26,11 @@ public:
     bool selectFolder(QString folderName);
     QList<Folder *> *getFolders(QString folderName);
 
-    bool getUids(const QString &foldername, QList<ssize_t> &uidList);
+    QList<ssize_t> getNonCachedUids(const QString &foldername);
     Message *getBody(ssize_t uid);
+    QList<Message *> *getAllMessage(const QString &foldername);
 
-    QList<Message *> *getAllHeaders(const QString &foldername, QList<ssize_t> headerUidList);
-    bool getAllBody(QMap<ssize_t, QString> &bodyDatas, QList<ssize_t> nonCachedUidList);
-    bool getFlags(const QString &foldername, QList<ssize_t> uidList, QMap<ssize_t, QList<bool>> &flagsList);
+    QList<Message *> *getAllHeaders(const QString &foldername);
 
     bool checkInternet();
 
@@ -38,10 +38,7 @@ public:
     bool moveMessage(const QString &souceFolderName, const QString &destFolderName, QList<ssize_t> uidList);
 
 private:
-    void parseFolders(QMap<QString, mailimap_mailbox_list *> folderMap, QList<Folder *> *&folderList);
-    void parseFolder(QStringList foldernameList, int index, mailimap_mailbox_list *mb, QList<Folder *> *&folderList);
-    QString getFolderName(QStringList folderList, int index);
-    QString getParentFolderName(QStringList folderList, int index);
+    QString getParentFolderName(QString fullfoldername, QChar delimter);
 
 private:
     QString m_Email;
@@ -49,10 +46,15 @@ private:
     QString m_Server;
     int m_Port;
 
+    bool m_Connected;
+    bool m_LoggedIn;
+
     QString m_SelectedFolder;
 
     mailimap *m_Imap;
     QMutex m_Mutex;
+
+    ImapCache *m_ImapCache;
 
     QMap<QString, Folder *> m_Folders;
 };

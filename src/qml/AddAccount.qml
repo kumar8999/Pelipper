@@ -13,27 +13,26 @@ Controls.Dialog {
     title: qsTr("Add Account")
 
     footer: Controls.DialogButtonBox {
-        standardButtons: Controls.DialogButtonBox.Ok | Controls.DialogButtonBox.Cancel
-
-        onAccepted: {
-            addAccount()
-            nameField.text = ""
-            emailField.text = ""
-            passwordField.text = ""
-            imapServerField.text = ""
-            imapPortField.text = ""
-            smtpServerField.text = ""
-            smtpPortField.text = ""
+        Controls.Button {
+            text: qsTr("Ok")
+            onClicked: {
+                addAccount()
+            }
         }
 
-        onRejected: {
-            nameField.text = ""
-            emailField.text = ""
-            passwordField.text = ""
-            imapServerField.text = ""
-            imapPortField.text = ""
-            smtpServerField.text = ""
-            smtpPortField.text = ""
+        Controls.Button {
+            text: qsTr("Cancel")
+            onClicked: {
+                nameField.text = ""
+                emailField.text = ""
+                passwordField.text = ""
+                imapServerField.text = ""
+                imapPortField.text = ""
+                smtpServerField.text = ""
+                smtpPortField.text = ""
+                close()
+                inlineMessage.visible = false
+            }
         }
     }
 
@@ -165,6 +164,13 @@ Controls.Dialog {
             inlineMessage.text = "Logged In Successfully"
             inlineMessage.visible = false
             addSheet.close()
+            nameField.text = ""
+            emailField.text = ""
+            passwordField.text = ""
+            imapServerField.text = ""
+            imapPortField.text = ""
+            smtpServerField.text = ""
+            smtpPortField.text = ""
         } else {
             inlineMessage.text = "Error Login"
             inlineMessage.type = Kirigami.MessageType.Error

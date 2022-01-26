@@ -435,6 +435,16 @@ QString Message::mimeToUtf8(std::string str)
     }
 }
 
+Flags *Message::flags() const
+{
+    return m_Flags;
+}
+
+void Message::setFlags(Flags *newFlags)
+{
+    m_Flags = newFlags;
+}
+
 const QString &Message::Data() const
 {
     return m_Data;

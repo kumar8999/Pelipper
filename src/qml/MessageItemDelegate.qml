@@ -8,7 +8,10 @@ ItemDelegate {
     property string sender
     property string dateString
     property bool highlightItem
+    property bool seenflag
+    property bool recentflag
     signal clicked(var mouse)
+    signal doubleClicked
 
     id: item_delegate
     height: 40
@@ -23,12 +26,11 @@ ItemDelegate {
     Label {
         id: title
         text: sender
-        font.bold: true
+        font.bold: seenflag ? false : true
         wrapMode: Text.WrapAnywhere
         anchors.leftMargin: 10
         width: parent.width
         enabled: false
-        color: Kirigami.Theme.disabledTextColor
     }
 
     Label {
@@ -36,10 +38,9 @@ ItemDelegate {
         anchors.top: title.bottom
         anchors.leftMargin: 10
         text: subject
-        font.weight: Font.Light
+        font.bold: seenflag ? false : true
         elide: Text.ElideRight
         width: parent.width
-        color: Kirigami.Theme.disabledTextColor
     }
 
     Label {
@@ -48,7 +49,6 @@ ItemDelegate {
         anchors.right: parent.right
         anchors.rightMargin: 10
         wrapMode: Text.WrapAnywhere
-        color: Kirigami.Theme.disabledTextColor
     }
 
     MouseArea {
@@ -56,6 +56,10 @@ ItemDelegate {
         anchors.fill: parent
         onClicked: {
             item_delegate.clicked(mouse)
+        }
+
+        onDoubleClicked: {
+            item_delegate.doubleClicked()
         }
     }
 }

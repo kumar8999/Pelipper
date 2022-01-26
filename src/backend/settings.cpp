@@ -1,13 +1,19 @@
 #include "settings.h"
 
+#include <QDebug>
 #include <QDir>
+#include <QStandardPaths>
 
 Settings::Settings(QObject *parent)
     : QObject(parent)
 {
     QDir dir;
     dir.mkpath(QDir::homePath() + "/.config/Pelipper");
-    m_Settings = new QSettings(QDir::homePath() + "/.config/Pelipper/config", QSettings::IniFormat, this);
+
+    QStringList configPaths = QStandardPaths::standardLocations(QStandardPaths::ConfigLocation);
+    QString configPath = configPaths[0] + "/";
+
+    m_Settings = new QSettings(configPath + "/Pelipper/config", QSettings::IniFormat, this);
 }
 
 bool Settings::saveAccountSettings(const QString &username,
@@ -23,7 +29,11 @@ bool Settings::saveAccountSettings(const QString &username,
         return false;
     }
 
+    qDebug() << accountIds;
+
     accountIds.append(email);
+
+    qDebug() << email;
 
     m_Settings->setValue("account.id", accountIds);
     m_Settings->beginGroup("account.settings." + email);

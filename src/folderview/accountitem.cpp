@@ -6,6 +6,7 @@ AccountItem::AccountItem(Account *account)
 {
     m_Account = account;
     setText(account->Email());
+    qDebug() << "account item";
     loadFolders();
 }
 
@@ -29,6 +30,8 @@ void AccountItem::getFolders()
 {
     ImapService *service = m_Account->IMAPService();
     QList<Folder *> *folders = service->getFolders("*");
+
+    qDebug() << folders;
 
     addFolders(this, *folders, m_Account->Email());
     emit foldersLoadFinished();

@@ -11,6 +11,11 @@ SortModel::SortModel(QObject *parent)
 {
 }
 
+bool SortModel::loading() const
+{
+    return m_loading;
+}
+
 bool SortModel::lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const
 {
     QVariant leftData = sourceModel()->data(source_left, Roles::DateRole);
@@ -22,10 +27,11 @@ bool SortModel::lessThan(const QModelIndex &source_left, const QModelIndex &sour
     return false;
 }
 
-bool SortModel::loading() const
+void SortModel::setLoadingFromModel()
 {
-    MessageListModel *model = static_cast<MessageListModel *>(sourceModel());
-    return model->loading();
+    auto _model = static_cast<MessageListModel *>(sourceModel());
+
+    setLoading(_model->loading());
 }
 
 void SortModel::setLoading(bool newLoading)
@@ -34,4 +40,12 @@ void SortModel::setLoading(bool newLoading)
         return;
     m_loading = newLoading;
     emit loadingChanged();
+}
+
+void SortModel::setModel(QAbstractListModel *model)
+{
+    setSourceModel(model);
+    auto _model = static_cast<MessageListModel *>(model);
+
+    connect(_model, &MessageListModel::loadingChanged, this, &SortModel::setLoadingFromModel);
 }

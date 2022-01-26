@@ -41,6 +41,8 @@ public:
 
     Q_INVOKABLE void selectedMessage(QString accountEmail, int uid);
 
+    void saveCache();
+
 public slots:
     void addAccount(const QString &username,
                     const QString &email,
@@ -75,7 +77,6 @@ private:
     bool m_hasMsgLoaded;
 
     Settings *m_Settings;
-
     FolderListModel *m_folderListModel;
     SortModel *m_messageListModel;
     MessageItem *m_messageItem;

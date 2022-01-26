@@ -21,6 +21,7 @@ QVariant MessageListModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     Message *header = m_MessageList->at(index.row());
+    Flags *flag = header->flags();
 
     switch (role) {
     case Roles::SenderRole: {
@@ -38,6 +39,10 @@ QVariant MessageListModel::data(const QModelIndex &index, int role) const
         return QVariant::fromValue(header->Uid());
     case Roles::EmailRole:
         return header->AccountEmail();
+    case Roles::MessageSeenRole:
+        return flag->SeenFlag();
+    case Roles::MessageRecentRole:
+        return flag->RecentFlag();
     }
 
     return QVariant();
@@ -51,11 +56,16 @@ QHash<int, QByteArray> MessageListModel::roleNames() const
     roles[Roles::DateRole] = "Date";
     roles[Roles::UIDRole] = "Uid";
     roles[Roles::EmailRole] = "Email";
+    roles[Roles::MessageSeenRole] = "Seen";
+    roles[Roles::MessageRecentRole] = "Recent";
     return roles;
 }
 
 void MessageListModel::appendRows(QList<Message *> *messageList)
 {
+    if (messageList->isEmpty()) {
+        return;
+    }
     beginInsertRows(QModelIndex(), rowCount(QModelIndex()), messageList->count() - 1 + rowCount(QModelIndex()));
     m_MessageList->append(*messageList);
     endInsertRows();
@@ -95,7 +105,7 @@ void MessageListModel::onMessageReadyFinished(QList<Message *> *msgList)
 void MessageListModel::loadMessage(Account *account, Folder *folder)
 {
     ImapService *service = account->IMAPService();
-    QList<Message *> *msgList = service->getAllHeaders(folder->FullName(), QList<ssize_t>());
+    QList<Message *> *msgList = service->getAllHeaders(folder->FullName());
 
     emit messageReadyFinished(msgList);
 

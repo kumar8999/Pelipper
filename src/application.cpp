@@ -13,7 +13,7 @@ Application::Application(QObject *parent)
     MessageListModel *_messageListModel = new MessageListModel(this);
 
     m_messageListModel = new SortModel(this);
-    m_messageListModel->setSourceModel(_messageListModel);
+    m_messageListModel->setModel(_messageListModel);
     m_messageListModel->setSortRole(Roles::DateRole);
     m_messageListModel->sort(0, Qt::DescendingOrder);
 
@@ -69,22 +69,16 @@ void Application::loadAccounts()
         int smtpPort;
         bool isOK = m_Settings->getAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
 
+        if (!isOK) {
+            continue;
+        }
+
         Account *account = new Account(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
         ImapService *accountService = account->IMAPService();
-
-        bool result = accountService->connect();
-
-        if (result) {
-            emit connectionSuccessFul(true);
-
-            result = accountService->login();
-            if (result) {
-                Session::getInstance()->addAccount(account);
-                setIsAccountInit(true);
-            }
-        } else {
-            emit connectionSuccessFul(false);
-        }
+        accountService->connect();
+        accountService->login();
+        Session::getInstance()->addAccount(account);
+        setIsAccountInit(true);
     }
 }
 
@@ -131,6 +125,10 @@ void Application::selectedMessage(QString accountEmail, int uid)
     });
 }
 
+void Application::saveCache()
+{
+}
+
 bool Application::hasMsgLoaded() const
 {
     return m_hasMsgLoaded;
@@ -165,6 +163,9 @@ void Application::addAccount(const QString &username,
             Session::getInstance()->addAccount(account);
             m_Settings->saveAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
             setIsAccountInit(true);
+            emit loginSuccessFul(true);
+        } else {
+            emit loginSuccessFul(false);
         }
     } else {
         emit connectionSuccessFul(false);

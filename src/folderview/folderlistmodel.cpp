@@ -2,6 +2,8 @@
 
 #include "../backend/session.h"
 
+#include <QDebug>
+
 FolderListModel::FolderListModel(QObject *parent)
     : m_loading(false)
     , QStandardItemModel(parent)
@@ -31,6 +33,8 @@ void FolderListModel::selectFolder(QModelIndex index)
 void FolderListModel::addAccount(Account *account)
 {
     setLoading(true);
+
+    qDebug() << "folder add account";
 
     AccountItem *item = new AccountItem(account);
     this->appendRow(item);

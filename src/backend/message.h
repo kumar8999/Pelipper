@@ -2,7 +2,7 @@
 #define MESSAGE_H
 
 #include "contact.h"
-//#include "flag.h"
+#include "flags.h"
 
 #include <libetpan/libetpan.h>
 
@@ -66,6 +66,9 @@ public:
 
     const QString &Data() const;
 
+    Flags *flags() const;
+    void setFlags(Flags *newFlags);
+
 private:
     void parseHeader();
     Contact *parseFrom(mailimf_from *mbList);
@@ -103,6 +106,8 @@ private:
     QList<Contact *> m_cc;
     QList<Contact *> m_Bcc;
     QList<Contact *> m_ReplyTo;
+
+    Flags *m_Flags;
 
     QString m_Html;
     QString m_PlainText;

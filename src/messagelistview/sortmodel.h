@@ -13,6 +13,9 @@ public:
     explicit SortModel(QObject *parent = nullptr);
 
     bool loading() const;
+
+    void setModel(QAbstractListModel *model);
+
     void setLoading(bool newLoading);
 
 signals:
@@ -20,6 +23,9 @@ signals:
 
 protected:
     bool lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const override;
+
+private slots:
+    void setLoadingFromModel();
 
 private:
     bool m_loading;

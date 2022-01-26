@@ -41,8 +41,10 @@ set(PROJECT_SOURCES
     src/folderview/basefolderitem.h src/folderview/basefolderitem.cpp
     src/folderview/folderlistmodel.h src/folderview/folderlistmodel.cpp
     src/backend/contact.h src/backend/contact.cpp
+    src/backend/flags.h src/backend/flags.cpp
     src/backend/message.h src/backend/message.cpp
     src/backend/folder.h src/backend/folder.cpp
+    src/backend/imapcache.h src/backend/imapcache.cpp
     src/backend/imapservice.h src/backend/imapservice.cpp
     src/backend/account.h src/backend/account.cpp
     src/backend/session.h src/backend/session.cpp
