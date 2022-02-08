@@ -36,7 +36,7 @@ ListView {
         id: item_delegate_
         width: control.width
 
-        highlightItem: false
+        highlightItem: model.Selected
         sender: model.Sender
         dateString: parseDate(model.Date)
         subject: model.Subject
@@ -63,20 +63,24 @@ ListView {
                     }
                 }
             } else {
+                console.log("selected")
+
                 control.model.clearSelections()
                 control.model.toggleSelected(model.index)
                 if (model.Selected)
                     control.mulBegin = index
+
+                console.log(model.Selected)
             }
 
-            var emailList = control.model.selectedMessageAccounts()
+            //            var emailList = control.model.selectedMessageAccounts()
 
-            if (emailList.length === 1) {
-                moveMenu.enabled = true
-                session.folderListModel.loadFolderList(emailList[0])
-            } else {
-                moveMenu.enabled = false
-            }
+            //            if (emailList.length === 1) {
+            //                moveMenu.enabled = true
+            //                session.folderListModel.loadFolderList(emailList[0])
+            //            } else {
+            //                moveMenu.enabled = false
+            //            }
         }
     }
 
@@ -134,11 +138,7 @@ ListView {
         var dateDiff = diffDate(datetime, currentDate)
 
         if (dateDiff < 1) {
-            if (dateDiff > 1) {
-                return dateDiff + " ago"
-            } else {
-                return "less than 1 hr ago"
-            }
+            return datetime.toLocaleTimeString(Qt.locale(), "h:m AP")
         } else if (dateDiff < 2) {
             return "Yesterday"
         } else if (dateDiff < 7) {

@@ -2,7 +2,9 @@
 #define ACCOUNT_H
 
 #include "folder.h"
+#include "idlemanager.h"
 #include "imapservice.h"
+#include "smtpservice.h"
 
 #include <QObject>
 
@@ -23,7 +25,13 @@ public:
 
     ImapService *IMAPService() const;
 
+    ImapService *createService();
+
     const QString &Email() const;
+
+    IdleManager *idleManager() const;
+
+    SmtpService *SMTPService() const;
 
 private:
     QString m_Username;
@@ -35,6 +43,8 @@ private:
     int m_SmtpPort;
 
     ImapService *m_ImapService;
+    IdleManager *m_IdleManager;
+    SmtpService *m_SmtpService;
 };
 
 #endif // ACCOUNT_H

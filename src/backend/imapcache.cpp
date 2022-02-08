@@ -3,8 +3,7 @@
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
-#include <QSqlError>
-#include <QSqlQuery>
+#include <QFileInfo>
 #include <QStandardPaths>
 
 ImapCache::ImapCache(const QString &email, QObject *parent)
@@ -12,14 +11,18 @@ ImapCache::ImapCache(const QString &email, QObject *parent)
     , QObject(parent)
 {
     QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
+    m_CacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
-    QStringList cachePathList = QStandardPaths::standardLocations(QStandardPaths::CacheLocation);
-    QString cachePath = cachePathList[0] + "/";
+    if (m_CacheFolderPath == "") {
+        m_CacheFolderPath = QDir::homePath() + "/.cache";
+    }
+
+    m_CacheFolderPath = m_CacheFolderPath + "/" + accountHash;
 
     QDir dir;
-    dir.mkpath(cachePath + accountHash);
+    dir.mkpath(m_CacheFolderPath);
 
-    m_Settings = new QSettings(cachePath + accountHash + "/" + accountHash + "_", QSettings::IniFormat, this);
+    m_Settings = new QSettings(m_CacheFolderPath + "/" + accountHash + "_", QSettings::IniFormat, this);
 }
 
 QList<Folder *> *ImapCache::getFolders()
@@ -38,14 +41,12 @@ QList<Folder *> *ImapCache::getFolders()
         m_Settings->endGroup();
 
         Folder *folder = new Folder(fullname, delimiter);
-
         QString folderparentName = getParentFolderName(fullname, delimiter);
 
         foldersMap.insert(fullname, folder);
 
         if (folderparentName != "") {
             Folder *parentFolder = foldersMap.value(folderparentName);
-
             parentFolder->appendChild(folder);
             continue;
         }
@@ -86,7 +87,6 @@ QList<ssize_t> ImapCache::getUidList(QString foldername)
     QStringList uids = m_Settings->value(foldername, QStringList()).toStringList();
     m_Settings->endGroup();
 
-    qDebug() << foldername << uids;
     QList<ssize_t> uidList;
     for (const auto &uid : qAsConst(uids)) {
         uidList.append(uid.toLong());
@@ -133,11 +133,9 @@ QList<Message *> *ImapCache::getAllMessages(QString foldername)
     return msgList;
 }
 
-Message *ImapCache::getMessage(QString foldername, ssize_t uid, QString &data)
+Message *ImapCache::getMessage(const QString &foldername, ssize_t uid, QString &data)
 {
-    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
-    QString cachePath = QDir::homePath() + "/.config/Pelipper/" + accountHash;
-    QDir dir(cachePath + "/MAILS");
+    QDir dir(m_CacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
         return nullptr;
@@ -169,14 +167,14 @@ Message *ImapCache::getMessage(QString foldername, ssize_t uid, QString &data)
 
 bool ImapCache::insertAllMessages(const QString &foldername, QList<Message *> *msgList)
 {
-    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
-
-    QString cachePath = QDir::homePath() + "/.config/Pelipper/" + accountHash;
-
-    QDir dir(cachePath + "/MAILS");
+    QDir dir(m_CacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
-        bool result = dir.mkpath(cachePath + "/MAILS");
+        bool result = dir.mkpath(m_CacheFolderPath + "/MAILS");
+
+        if (!result) {
+            return false;
+        }
     }
 
     QStringList uidList;
@@ -201,15 +199,14 @@ bool ImapCache::insertAllMessages(const QString &foldername, QList<Message *> *m
 
 bool ImapCache::insertMessage(const QString &foldername, Message *msg)
 {
-    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
-
-    QStringList cachePathList = QStandardPaths::standardLocations(QStandardPaths::CacheLocation);
-    QString cachePath = cachePathList[0] + "/" + accountHash + "/";
-
-    QDir dir(cachePath + "/MAILS");
+    QDir dir(m_CacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
-        bool result = dir.mkpath(cachePath + "/MAILS");
+        bool result = dir.mkpath(m_CacheFolderPath + "/MAILS");
+
+        if (!result) {
+            return false;
+        }
     }
 
     QFile file(dir.path() + "/" + QString::number(msg->Uid()));
@@ -232,9 +229,7 @@ bool ImapCache::insertMessage(const QString &foldername, Message *msg)
 
 bool ImapCache::deleteMessage(const QString &foldername, QList<ssize_t> uidList)
 {
-    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
-    QString cachePath = QDir::homePath() + "/.config/Pelipper/" + accountHash;
-    QDir dir(cachePath + "/MAILS");
+    QDir dir(m_CacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
         return false;

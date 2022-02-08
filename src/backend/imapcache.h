@@ -22,7 +22,7 @@ public:
 
     QList<Message *> *getAllMessages(QString foldername);
 
-    Message *getMessage(QString foldername, ssize_t uid, QString &data);
+    Message *getMessage(const QString &foldername, ssize_t uid, QString &data);
 
     bool insertAllMessages(const QString &foldername, QList<Message *> *msgList);
 
@@ -34,6 +34,7 @@ public:
 
 private:
     QString m_Email;
+    QString m_CacheFolderPath;
     QMutex m_Mutex;
     QSettings *m_Settings;
 };

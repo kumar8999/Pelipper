@@ -37,18 +37,3 @@ const QChar &Folder::Delimiter() const
 {
     return m_Delimiter;
 }
-
-Folder *Folder::Parent() const
-{
-    return m_Parent;
-}
-
-void Folder::setParent(Folder *newParent)
-{
-    m_Parent = newParent;
-}
-
-void Folder::setDisplayName(const QString &newDisplayName)
-{
-    m_DisplayName = newDisplayName;
-}

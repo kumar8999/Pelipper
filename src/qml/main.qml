@@ -23,6 +23,13 @@ Kirigami.ApplicationWindow {
             }
 
             Action {
+                text: qsTr("Compose")
+                onTriggered: {
+                    composerWidget.show()
+                }
+            }
+
+            Action {
                 text: qsTr("Refresh")
                 onTriggered: {
 
@@ -80,5 +87,9 @@ Kirigami.ApplicationWindow {
 
     AddAccount {
         id: addAccount
+    }
+
+    ComposerWidget {
+        id: composerWidget
     }
 }

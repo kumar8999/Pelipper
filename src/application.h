@@ -1,6 +1,7 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "Widget/attachmentmodel.h"
 #include "backend/session.h"
 #include "backend/settings.h"
 #include "folderview/folderlistmodel.h"
@@ -19,6 +20,7 @@ class Application : public QObject
     Q_PROPERTY(bool hasMsgLoaded READ hasMsgLoaded WRITE setHasMsgLoaded NOTIFY hasMsgLoadedChanged)
     Q_PROPERTY(SortModel *messageListModel READ messageListModel WRITE setMessageListModel NOTIFY messageListModelChanged)
     Q_PROPERTY(MessageItem *messageItem READ messageItem WRITE setMessageItem NOTIFY messageItemChanged)
+    Q_PROPERTY(AttachmentModel *attachmentListModel READ attachmentListModel WRITE setAttachmentListModel NOTIFY attachmentListModelChanged)
 
 public:
     Application(QObject *parent = nullptr);
@@ -39,11 +41,15 @@ public:
     MessageItem *messageItem() const;
     void setMessageItem(MessageItem *newMessageItem);
 
-    Q_INVOKABLE void selectedMessage(QString accountEmail, int uid);
-
-    void saveCache();
+    AttachmentModel *attachmentListModel() const;
+    void setAttachmentListModel(AttachmentModel *newAttachmentListModel);
 
 public slots:
+
+    void selectedMessage(QString accountEmail, int uid);
+
+    void sendMessage(QString from, QString to, QString cc, QString bcc, QString subject, QString msg, QStringList attachments);
+
     void addAccount(const QString &username,
                     const QString &email,
                     const QString &password,
@@ -51,6 +57,8 @@ public slots:
                     const int &imapPort,
                     const QString &smtpServer,
                     const int &smtpPort);
+
+    QStringList accountEmail();
 
 signals:
     void folderListModelChanged();
@@ -69,6 +77,8 @@ signals:
 
     void messageReadReady(Message *msg);
 
+    void attachmentListModelChanged();
+
 private:
     void loadAccounts();
 
@@ -80,6 +90,7 @@ private:
     FolderListModel *m_folderListModel;
     SortModel *m_messageListModel;
     MessageItem *m_messageItem;
+    AttachmentModel *m_attachmentListModel;
 };
 
 #endif // APPLICATION_H

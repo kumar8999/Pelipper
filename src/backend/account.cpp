@@ -1,6 +1,5 @@
 #include "account.h"
 
-#include <QDebug>
 #include <QtConcurrent>
 
 Account::Account(const QString &username,
@@ -21,6 +20,8 @@ Account::Account(const QString &username,
     , QObject(parent)
 {
     m_ImapService = new ImapService(email, password, imapServer, imapPort);
+    m_SmtpService = new SmtpService(m_Username, m_Password, m_SmtpServer, m_SmtpPort, m_Email, 0, this);
+    m_IdleManager = new IdleManager(new ImapService(m_Email, m_Password, m_ImapServer, m_ImapPort));
 }
 
 Account::~Account()
@@ -36,4 +37,14 @@ ImapService *Account::IMAPService() const
 const QString &Account::Email() const
 {
     return m_Email;
+}
+
+IdleManager *Account::idleManager() const
+{
+    return m_IdleManager;
+}
+
+SmtpService *Account::SMTPService() const
+{
+    return m_SmtpService;
 }

@@ -58,6 +58,7 @@ QHash<int, QByteArray> MessageListModel::roleNames() const
     roles[Roles::EmailRole] = "Email";
     roles[Roles::MessageSeenRole] = "Seen";
     roles[Roles::MessageRecentRole] = "Recent";
+    roles[Roles::SelectedRole] = "Selected";
     return roles;
 }
 

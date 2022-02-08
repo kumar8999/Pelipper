@@ -17,11 +17,14 @@ Application::Application(QObject *parent)
     m_messageListModel->setSortRole(Roles::DateRole);
     m_messageListModel->sort(0, Qt::DescendingOrder);
 
+    m_attachmentListModel = new AttachmentModel(this);
+
     connect(m_folderListModel, &FolderListModel::folderSelected, _messageListModel, &MessageListModel::onFolderSelected);
     connect(this, &Application::messageReadReady, this, [=](Message *msg) {
         setMessageItem(new MessageItem(msg, this));
         setHasMsgLoaded(true);
     });
+
     loadAccounts();
 }
 
@@ -79,7 +82,22 @@ void Application::loadAccounts()
         accountService->login();
         Session::getInstance()->addAccount(account);
         setIsAccountInit(true);
+        auto idle = account->idleManager();
+        idle->start();
     }
+}
+
+AttachmentModel *Application::attachmentListModel() const
+{
+    return m_attachmentListModel;
+}
+
+void Application::setAttachmentListModel(AttachmentModel *newAttachmentListModel)
+{
+    if (m_attachmentListModel == newAttachmentListModel)
+        return;
+    m_attachmentListModel = newAttachmentListModel;
+    emit attachmentListModelChanged();
 }
 
 MessageItem *Application::messageItem() const
@@ -111,11 +129,8 @@ void Application::setMessageListModel(SortModel *newMessageListModel)
 void Application::selectedMessage(QString accountEmail, int uid)
 {
     QtConcurrent::run([=]() {
-        qDebug() << "selected messaged";
         Session *session = Session::getInstance();
         Account *account = session->getAccount(accountEmail);
-
-        qDebug() << accountEmail;
 
         ImapService *imapService = account->IMAPService();
 
@@ -125,8 +140,44 @@ void Application::selectedMessage(QString accountEmail, int uid)
     });
 }
 
-void Application::saveCache()
+void Application::sendMessage(QString from, QString to, QString cc, QString bcc, QString subject, QString msg, QStringList attachments)
 {
+    QtConcurrent::run([=]() {
+        Session *session = Session::getInstance();
+        Account *account = session->getAccount(from);
+
+        qDebug() << from;
+
+        SmtpService *smtpService = account->SMTPService();
+
+        QStringList toList = to.split(",");
+        QList<Contact> toContactList;
+
+        for (auto i = 0; i < toList.length(); i++) {
+            Contact contact(toList.at(i));
+            toContactList.append(contact);
+        }
+
+        qDebug() << toList;
+
+        QStringList ccList = cc.split(",");
+        QList<Contact> ccContactList;
+
+        for (auto i = 0; i < ccList.length(); i++) {
+            Contact contact(ccList.at(i));
+            ccContactList.append(contact);
+        }
+
+        QStringList bccList = cc.split(",");
+        QList<Contact> bccContactList;
+
+        for (auto i = 0; i < bccList.length(); i++) {
+            Contact contact(bccList.at(i));
+            bccContactList.append(contact);
+        }
+
+        smtpService->Send(subject, msg, toContactList, ccContactList, bccContactList, attachments);
+    });
 }
 
 bool Application::hasMsgLoaded() const
@@ -170,4 +221,17 @@ void Application::addAccount(const QString &username,
     } else {
         emit connectionSuccessFul(false);
     }
+}
+
+QStringList Application::accountEmail()
+{
+    QList<Account *> accounts = Session::getInstance()->getAccounts();
+
+    QStringList accountEmail;
+    for (int i = 0; i < accounts.length(); i++) {
+        QString email = accounts.at(i)->Email();
+        accountEmail.append(email);
+    }
+
+    return accountEmail;
 }

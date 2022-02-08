@@ -1,6 +1,7 @@
 #ifndef SORTMODEL_H
 #define SORTMODEL_H
 
+#include <QItemSelectionModel>
 #include <QSortFilterProxyModel>
 
 class SortModel : public QSortFilterProxyModel
@@ -18,8 +19,21 @@ public:
 
     void setLoading(bool newLoading);
 
+    QVariant data(const QModelIndex &index, int role) const override;
+
+public slots:
+    void setSelected(int indexValue);
+
+    void toggleSelected(int indexValue);
+
+    void clearSelections();
+
+    void selectAll();
+
 signals:
     void loadingChanged();
+
+    void selectedItemChanged();
 
 protected:
     bool lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const override;
@@ -29,6 +43,7 @@ private slots:
 
 private:
     bool m_loading;
+    QItemSelectionModel *m_SelectionModel;
 };
 
 #endif // SORTMODEL_H

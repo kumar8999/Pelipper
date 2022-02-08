@@ -27,8 +27,6 @@ bool ImapService::connect()
     int r = mailimap_ssl_connect(m_Imap, m_Server.toStdString().c_str(), m_Port);
 
     if (r == MAILIMAP_NO_ERROR_NON_AUTHENTICATED) {
-        qDebug() << m_Email << "connect" << r;
-
         m_Connected = true;
     }
 
@@ -42,8 +40,6 @@ bool ImapService::login()
     int r = mailimap_login(m_Imap, m_Email.toStdString().c_str(), m_Password.toStdString().c_str());
 
     if (r == MAILIMAP_NO_ERROR) {
-        qDebug() << m_Email << "login" << r;
-
         m_LoggedIn = true;
     }
 
@@ -75,7 +71,6 @@ QList<Folder *> *ImapService::getFolders(QString folderName)
     clist *list = NULL;
 
     if (!checkInternet() || (!m_Connected && !m_LoggedIn)) {
-        qDebug() << "checkinternet";
         return m_ImapCache->getFolders();
     }
 
@@ -110,10 +105,7 @@ QList<Folder *> *ImapService::getFolders(QString folderName)
 
         QString foldername = folderMapIter.key();
         mailimap_mailbox_list *mblist = folderMapIter.value();
-
-        QChar delimiter;
-        delimiter = QChar(mblist->mb_delimiter);
-
+        QChar delimiter = QChar(mblist->mb_delimiter);
         QString folderparentName = getParentFolderName(foldername, delimiter);
 
         Folder *folder = new Folder(foldername, delimiter);
@@ -315,8 +307,6 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
             continue;
         }
 
-        qDebug() << "seen flag" << flags->SeenFlag();
-
         Message *msg = new Message(m_Email, uid);
         msg->setHeaderData(data);
         msg->setFlags(flags);
@@ -434,8 +424,6 @@ Message *ImapService::getBody(ssize_t uid)
     Message *msg = new Message(uid);
     msg->setFlags(flags);
     msg->setBodyData(data);
-
-    qDebug() << "flags seen" << flags->SeenFlag();
 
     m_ImapCache->insertMessage(m_SelectedFolder, msg);
 
@@ -600,6 +588,32 @@ bool ImapService::moveMessage(const QString &souceFolderName, const QString &des
     mailimap_set_free(set);
 
     return r == MAILIMAP_NO_ERROR;
+}
+
+int ImapService::idleStart(const QString &foldername)
+{
+    QMutexLocker locker(&m_Mutex);
+
+    if (!selectFolder(foldername)) {
+        return -1;
+    }
+
+    int rv = mailimap_idle(m_Imap);
+    if (rv == MAILIMAP_NO_ERROR) {
+        int fd = mailimap_idle_get_fd(m_Imap);
+        return fd;
+    }
+
+    return -1;
+}
+
+bool ImapService::idleDone()
+{
+    QMutexLocker locker(&m_Mutex);
+
+    int rv = mailimap_idle_done(m_Imap);
+
+    return rv == MAILIMAP_NO_ERROR;
 }
 
 QString ImapService::getParentFolderName(QString fullfoldername, QChar delimter)

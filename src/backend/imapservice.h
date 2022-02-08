@@ -8,7 +8,7 @@
 #include <QMap>
 #include <QMutex>
 #include <QObject>
-#include <libetpan/imapdriver_tools.h>
+
 #include <libetpan/libetpan.h>
 
 class ImapService : public QObject
@@ -37,6 +37,9 @@ public:
     bool deleteMessage(const QString &foldername, QList<ssize_t> uidList);
     bool moveMessage(const QString &souceFolderName, const QString &destFolderName, QList<ssize_t> uidList);
 
+    int idleStart(const QString &foldername);
+    bool idleDone();
+
 private:
     QString getParentFolderName(QString fullfoldername, QChar delimter);
 
@@ -48,7 +51,6 @@ private:
 
     bool m_Connected;
     bool m_LoggedIn;
-
     QString m_SelectedFolder;
 
     mailimap *m_Imap;

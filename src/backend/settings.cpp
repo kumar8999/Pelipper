@@ -13,6 +13,8 @@ Settings::Settings(QObject *parent)
     QStringList configPaths = QStandardPaths::standardLocations(QStandardPaths::ConfigLocation);
     QString configPath = configPaths[0] + "/";
 
+    qDebug() << configPaths;
+
     m_Settings = new QSettings(configPath + "/Pelipper/config", QSettings::IniFormat, this);
 }
 

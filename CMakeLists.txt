@@ -32,6 +32,8 @@ find_package(KF5I18n)
 
 
 set(PROJECT_SOURCES
+    src/Widget/attachmentmodel.h src/Widget/attachmentmodel.cpp
+    src/Widget/documenthandler.h src/Widget/documenthandler.cpp
     src/messageview/messageitem.h src/messageview/messageitem.cpp
     src/messagelistview/sortmodel.h src/messagelistview/sortmodel.cpp
     src/messagelistview/roles.h
@@ -44,6 +46,9 @@ set(PROJECT_SOURCES
     src/backend/flags.h src/backend/flags.cpp
     src/backend/message.h src/backend/message.cpp
     src/backend/folder.h src/backend/folder.cpp
+    src/backend/cachemanager.h src/backend/cachemanager.cpp
+    src/backend/idlemanager.h src/backend/idlemanager.cpp
+    src/backend/smtpservice.h src/backend/smtpservice.cpp
     src/backend/imapcache.h src/backend/imapcache.cpp
     src/backend/imapservice.h src/backend/imapservice.cpp
     src/backend/account.h src/backend/account.cpp
