@@ -27,7 +27,7 @@ public:
     void setLoading(bool newLoading);
 
 public slots:
-    void onFolderSelected(QHash<Account *, Folder *> accountFolder);
+    void onFolderSelected(QHash<Account *, Folder *> *accountFolder);
 
 signals:
     void loadingChanged();

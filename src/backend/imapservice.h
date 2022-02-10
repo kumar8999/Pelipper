@@ -24,7 +24,8 @@ public:
     bool logout();
 
     bool selectFolder(QString folderName);
-    QList<Folder *> *getFolders(QString folderName);
+    QList<Folder *> *getFolders(QString folderName = "*");
+    Folder *getFolder(QString foldername);
 
     QList<ssize_t> getNonCachedUids(const QString &foldername);
     Message *getBody(ssize_t uid);

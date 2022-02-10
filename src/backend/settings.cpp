@@ -13,8 +13,6 @@ Settings::Settings(QObject *parent)
     QStringList configPaths = QStandardPaths::standardLocations(QStandardPaths::ConfigLocation);
     QString configPath = configPaths[0] + "/";
 
-    qDebug() << configPaths;
-
     m_Settings = new QSettings(configPath + "/Pelipper/config", QSettings::IniFormat, this);
 }
 
@@ -31,11 +29,7 @@ bool Settings::saveAccountSettings(const QString &username,
         return false;
     }
 
-    qDebug() << accountIds;
-
     accountIds.append(email);
-
-    qDebug() << email;
 
     m_Settings->setValue("account.id", accountIds);
     m_Settings->beginGroup("account.settings." + email);
@@ -96,5 +90,21 @@ void Settings::saveIsAccountCached(const QString &accountEmail, bool isAccountCa
 {
     m_Settings->beginGroup("account.settings." + accountEmail);
     m_Settings->setValue("account.cached", isAccountCached);
+    m_Settings->endGroup();
+}
+
+void Settings::getSelectedFolder(QString &email, QString &foldername)
+{
+    m_Settings->beginGroup("account.settings");
+    email = m_Settings->value("account.name", "").toString();
+    foldername = m_Settings->value("account.savedfolder", "").toString();
+    m_Settings->endGroup();
+}
+
+void Settings::setSelectedFolder(const QString &email, const QString &foldername)
+{
+    m_Settings->beginGroup("account.settings");
+    m_Settings->setValue("account.name", email);
+    m_Settings->setValue("account.savedfolder", foldername);
     m_Settings->endGroup();
 }

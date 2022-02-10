@@ -26,6 +26,10 @@ public:
 
     void saveIsAccountCached(const QString &accountEmail, bool isAccountCached);
 
+    void getSelectedFolder(QString &email, QString &foldername);
+
+    void setSelectedFolder(const QString &email, const QString &foldername);
+
 private:
     QSettings *m_Settings;
 };

@@ -2,8 +2,10 @@
 #define FOLDERLISTMODEL_H
 
 #include "../backend/account.h"
+#include "../backend/settings.h"
 #include "accountitem.h"
 
+#include <QFuture>
 #include <QStandardItemModel>
 
 class FolderListModel : public QStandardItemModel
@@ -24,7 +26,7 @@ public slots:
 signals:
     void loadingChanged();
 
-    void folderSelected(QHash<Account *, Folder *> accountFolders);
+    void folderSelected(QHash<Account *, Folder *> *accountFolders);
 
 private slots:
     void addAccount(Account *account);
@@ -36,6 +38,8 @@ private:
 
 private:
     bool m_loading;
+    Settings *m_Settings;
+    QFuture<void> selectFolderThread;
 };
 
 #endif // FOLDERLISTMODEL_H

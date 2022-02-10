@@ -3,12 +3,14 @@
 #include "../backend/session.h"
 
 #include <QDebug>
+#include <QtConcurrent>
 
 FolderListModel::FolderListModel(QObject *parent)
     : m_loading(false)
     , QStandardItemModel(parent)
 {
     auto session = Session::getInstance();
+    m_Settings = new Settings(this);
 
     connect(session, &Session::accountAdded, this, &FolderListModel::addAccount);
 }
@@ -22,9 +24,11 @@ void FolderListModel::selectFolder(QModelIndex index)
 
         Account *account = item_->account();
 
-        QHash<Account *, Folder *> accountFolder;
+        QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
 
-        accountFolder[account] = item_->folder();
+        accountFolder->insert(account, item_->folder());
+
+        m_Settings->setSelectedFolder(account->Email(), item_->folder()->FullName());
 
         emit folderSelected(accountFolder);
     }
@@ -34,8 +38,6 @@ void FolderListModel::addAccount(Account *account)
 {
     setLoading(true);
 
-    qDebug() << "folder add account";
-
     AccountItem *item = new AccountItem(account);
     this->appendRow(item);
     connect(item, &AccountItem::foldersLoadFinished, this, &FolderListModel::onFoldersLoadFinished);
@@ -44,6 +46,42 @@ void FolderListModel::addAccount(Account *account)
 void FolderListModel::onFoldersLoadFinished()
 {
     setLoading(false);
+
+    AccountItem *item = static_cast<AccountItem *>(sender());
+    Account *account = item->account();
+    ImapService *service = account->IMAPService();
+
+    QString email;
+    QString foldername;
+    m_Settings->getSelectedFolder(email, foldername);
+
+    selectFolderThread.cancel();
+
+    if (email == account->Email()) {
+        selectFolderThread = QtConcurrent::run([&]() {
+            QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
+
+            Folder *folder = service->getFolder(foldername);
+
+            if (folder != nullptr) {
+                accountFolder->insert(account, folder);
+
+                emit folderSelected(accountFolder);
+            }
+        });
+    } else {
+        selectFolderThread = QtConcurrent::run([&]() {
+            QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
+
+            Folder *folder = service->getFolder("INBOX");
+
+            if (folder != nullptr) {
+                accountFolder->insert(account, folder);
+
+                emit folderSelected(accountFolder);
+            }
+        });
+    }
 }
 
 bool FolderListModel::loading() const

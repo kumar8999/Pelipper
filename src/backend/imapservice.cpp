@@ -109,6 +109,7 @@ QList<Folder *> *ImapService::getFolders(QString folderName)
         QString folderparentName = getParentFolderName(foldername, delimiter);
 
         Folder *folder = new Folder(foldername, delimiter);
+        m_Folders.insert(foldername, folder);
         folders.insert(foldername, folder);
 
         if (folderparentName != "") {
@@ -125,6 +126,15 @@ QList<Folder *> *ImapService::getFolders(QString folderName)
     m_ImapCache->insertFolders(*folderList);
 
     return folderList;
+}
+
+Folder *ImapService::getFolder(QString foldername)
+{
+    if (!m_Folders.contains(foldername)) {
+        getFolders();
+    }
+
+    return m_Folders.value(foldername);
 }
 
 QList<ssize_t> ImapService::getNonCachedUids(const QString &foldername)
@@ -211,7 +221,7 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
         msgList = new QList<Message *>();
     }
 
-    if (nonCachedUidList.isEmpty()) {
+    if (nonCachedUidList.isEmpty() && checkInternet()) {
         return msgList;
     }
 

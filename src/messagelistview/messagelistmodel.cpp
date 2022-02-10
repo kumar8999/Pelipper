@@ -72,7 +72,7 @@ void MessageListModel::appendRows(QList<Message *> *messageList)
     endInsertRows();
 }
 
-void MessageListModel::onFolderSelected(QHash<Account *, Folder *> accountFolder)
+void MessageListModel::onFolderSelected(QHash<Account *, Folder *> *accountFolder)
 {
     qDeleteAll(*m_MessageList);
     m_MessageList->clear();
@@ -88,7 +88,7 @@ void MessageListModel::onFolderSelected(QHash<Account *, Folder *> accountFolder
 
     m_Threads.clear();
 
-    QHashIterator<Account *, Folder *> iter(accountFolder);
+    QHashIterator<Account *, Folder *> iter(*accountFolder);
     while (iter.hasNext()) {
         iter.next();
         Account *account = iter.key();
