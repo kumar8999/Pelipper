@@ -26,14 +26,14 @@ else()
   message(STATUS "Found libetpan: ${LIBETPAN_LIBRARY}")
 endif()
 
-find_package(Qt5 COMPONENTS Core Widgets Quick WebView Concurrent Sql REQUIRED)
+find_package(Qt5 COMPONENTS Core Widgets Quick WebView Concurrent  REQUIRED)
 find_package(KF5Kirigami2)
 find_package(KF5I18n)
 
 
 set(PROJECT_SOURCES
-    src/Widget/attachmentmodel.h src/Widget/attachmentmodel.cpp
-    src/Widget/documenthandler.h src/Widget/documenthandler.cpp
+    src/composer/attachmentmodel.h src/composer/attachmentmodel.cpp
+    src/composer/documenthandler.h src/composer/documenthandler.cpp
     src/messageview/messageitem.h src/messageview/messageitem.cpp
     src/messagelistview/sortmodel.h src/messagelistview/sortmodel.cpp
     src/messagelistview/roles.h
@@ -64,7 +64,7 @@ add_executable(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}  ${LIBETPAN_LIBRARY})
-target_link_libraries(${PROJECT_NAME}  Qt5::Core Qt5::Widgets Qt5::WebView Qt5::Quick Qt5::Concurrent Qt5::Sql)
+target_link_libraries(${PROJECT_NAME}  Qt5::Core Qt5::Widgets Qt5::WebView Qt5::Quick Qt5::Concurrent)
 target_link_libraries(${PROJECT_NAME}  KF5::Kirigami2)
 target_link_libraries(${PROJECT_NAME}  KF5::I18n)
 

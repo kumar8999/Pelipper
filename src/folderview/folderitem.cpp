@@ -2,8 +2,8 @@
 
 FolderItem::FolderItem(Account *account, Folder *folder)
 {
-    m_Account = account;
-    m_Folder = folder;
+    m_account = account;
+    m_folder = folder;
     setText(folder->DisplayName());
 }
 
@@ -14,10 +14,10 @@ QString FolderItem::Type() const
 
 Account *FolderItem::account() const
 {
-    return m_Account;
+    return m_account;
 }
 
 Folder *FolderItem::folder() const
 {
-    return m_Folder;
+    return m_folder;
 }

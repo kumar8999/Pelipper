@@ -18,6 +18,7 @@ public:
     FolderListModel(QObject *parent = nullptr);
 
     bool loading() const;
+
     void setLoading(bool newLoading);
 
 public slots:
@@ -34,12 +35,9 @@ private slots:
     void onFoldersLoadFinished();
 
 private:
-    void getFolders();
-
-private:
     bool m_loading;
-    Settings *m_Settings;
-    QFuture<void> selectFolderThread;
+    Settings *m_settings;
+    QFuture<void> m_selectFolderThread;
 };
 
 #endif // FOLDERLISTMODEL_H

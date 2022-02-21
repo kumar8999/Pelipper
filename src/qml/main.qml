@@ -59,6 +59,18 @@ Kirigami.ApplicationWindow {
 
         Kirigami.Page {
 
+            actions.right: Kirigami.Action {
+                displayComponent: BusyIndicator {
+                    MouseArea {
+                        anchors.fill: parent
+
+                        onClicked: {
+                            console.log("clicked")
+                        }
+                    }
+                }
+            }
+
             Button {
                 anchors.centerIn: parent
                 text: qsTr("Add Account")
@@ -79,6 +91,7 @@ Kirigami.ApplicationWindow {
         id: loadingPage
 
         Kirigami.Page {
+
             BusyIndicator {
                 anchors.centerIn: parent
             }

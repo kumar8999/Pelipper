@@ -13,6 +13,8 @@ class SortModel : public QSortFilterProxyModel
 public:
     explicit SortModel(QObject *parent = nullptr);
 
+    ~SortModel();
+
     bool loading() const;
 
     void setModel(QAbstractListModel *model);
@@ -43,7 +45,7 @@ private slots:
 
 private:
     bool m_loading;
-    QItemSelectionModel *m_SelectionModel;
+    QItemSelectionModel *m_selectionModel;
 };
 
 #endif // SORTMODEL_H

@@ -5,6 +5,9 @@ import org.kde.kirigami 2.13 as Kirigami
 import QtWebView 1.15
 
 Kirigami.Page {
+
+    padding: 0
+
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal

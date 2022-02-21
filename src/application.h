@@ -1,9 +1,9 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-#include "Widget/attachmentmodel.h"
 #include "backend/session.h"
 #include "backend/settings.h"
+#include "composer/attachmentmodel.h"
 #include "folderview/folderlistmodel.h"
 #include "messagelistview/messagelistmodel.h"
 #include "messagelistview/sortmodel.h"
@@ -45,10 +45,15 @@ public:
     void setAttachmentListModel(AttachmentModel *newAttachmentListModel);
 
 public slots:
+    void selectedMessage(const QString &accountEmail, int uid);
 
-    void selectedMessage(QString accountEmail, int uid);
-
-    void sendMessage(QString from, QString to, QString cc, QString bcc, QString subject, QString msg, QStringList attachments);
+    void sendMessage(const QString &from,
+                     const QString &to,
+                     const QString &cc,
+                     const QString &bcc,
+                     const QString &subject,
+                     const QString &msg,
+                     const QStringList &attachments);
 
     void addAccount(const QString &username,
                     const QString &email,
@@ -78,6 +83,9 @@ signals:
     void messageReadReady(Message *msg);
 
     void attachmentListModelChanged();
+
+private slots:
+    void onAccountAdded(Account *account);
 
 private:
     void loadAccounts();

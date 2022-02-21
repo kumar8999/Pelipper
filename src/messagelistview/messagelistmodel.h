@@ -1,6 +1,7 @@
 #ifndef MESSAGELISTMODEL_H
 #define MESSAGELISTMODEL_H
 
+#include "../Threads/messagelistthread.h"
 #include "../backend/account.h"
 #include "../backend/message.h"
 #include "roles.h"
@@ -12,8 +13,12 @@ class MessageListModel : public QAbstractListModel
 {
     Q_OBJECT
 
+    Q_PROPERTY(bool loading READ loading WRITE setLoading NOTIFY loadingChanged)
+
 public:
     explicit MessageListModel(QObject *parent = nullptr);
+
+    ~MessageListModel();
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
@@ -24,6 +29,7 @@ public:
     void appendRows(QList<Message *> *messageList);
 
     bool loading() const;
+
     void setLoading(bool newLoading);
 
 public slots:
@@ -32,25 +38,22 @@ public slots:
 signals:
     void loadingChanged();
 
-    void messageReadyFinished(QList<Message *> *msgList);
+    void messageReadReady(QList<Message *> *msgList);
 
 private slots:
     void onMessageReadyFinished(QList<Message *> *msgList);
 
 private:
-    void loadMessage(Account *account, Folder *folder);
-
     QString parseDate(const QDateTime &datetime) const;
 
+    void loadMessage(QHash<Account *, Folder *> *accountFolder);
+
 private:
-    QList<Message *> *m_MessageList;
+    QList<Message *> *m_messageList;
 
     bool m_loading;
-    bool m_ThreadRunning = false;
 
-    QList<QFuture<void>> m_Threads;
-
-    QFuture<void> m_Thread;
+    QFuture<void> m_future;
 };
 
 #endif // MESSAGELISTMODEL_H

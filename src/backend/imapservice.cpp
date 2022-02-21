@@ -2,79 +2,80 @@
 
 #include <QDebug>
 
-ImapService::ImapService(const QString &email, const QString &password, const QString &server, int port)
-    : m_Email(email)
-    , m_Password(password)
-    , m_Server(server)
-    , m_Port(port)
-    , m_Connected(false)
-    , m_LoggedIn(false)
+ImapService::ImapService(const QString &email, const QString &password, const QString &server, int port, ConnectionType connectionType, QObject *parent)
+    : m_email(email)
+    , m_password(password)
+    , m_server(server)
+    , m_port(port)
+    , m_connectionType(connectionType)
+    , m_connected(false)
+    , m_loggedIn(false)
 {
-    m_ImapCache = new ImapCache(email, this);
-    m_Imap = mailimap_new(0, NULL);
+    m_imapCache = new ImapCache(email, this);
+    m_imap = mailimap_new(0, NULL);
 }
 
 ImapService::~ImapService()
 {
-    delete m_ImapCache;
-    mailimap_free(m_Imap);
+    delete m_imapCache;
+    mailimap_free(m_imap);
 }
 
 bool ImapService::connect()
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
-    int r = mailimap_ssl_connect(m_Imap, m_Server.toStdString().c_str(), m_Port);
+    int r = mailimap_ssl_connect(m_imap, m_server.toStdString().c_str(), m_port);
 
     if (r == MAILIMAP_NO_ERROR_NON_AUTHENTICATED) {
-        m_Connected = true;
+        m_connected = true;
     }
 
-    return m_Connected;
+    return m_connected;
 }
 
 bool ImapService::login()
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
-    int r = mailimap_login(m_Imap, m_Email.toStdString().c_str(), m_Password.toStdString().c_str());
+    int r = mailimap_login(m_imap, m_email.toStdString().c_str(), m_password.toStdString().c_str());
 
     if (r == MAILIMAP_NO_ERROR) {
-        m_LoggedIn = true;
+        m_loggedIn = true;
     }
 
-    return m_LoggedIn;
+    return m_loggedIn;
 }
 
 bool ImapService::logout()
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
-    int r = mailimap_logout(m_Imap);
-
-    return r == MAILIMAP_NO_ERROR;
-}
-
-bool ImapService::selectFolder(QString folderName)
-{
-    int r = mailimap_select(m_Imap, folderName.toStdString().c_str());
-
-    m_SelectedFolder = folderName;
+    int r = mailimap_logout(m_imap);
 
     return r == MAILIMAP_NO_ERROR;
 }
 
-QList<Folder *> *ImapService::getFolders(QString folderName)
+bool ImapService::selectFolder(const QString &folderName)
 {
-    QMutexLocker locker(&m_Mutex);
+    int r = mailimap_select(m_imap, folderName.toStdString().c_str());
+
+    m_selectedFolder = folderName;
+
+    return r == MAILIMAP_NO_ERROR;
+}
+
+QList<Folder *> *ImapService::getFolders(const QString &folderName)
+{
+    QMutexLocker locker(&m_mutex);
 
     clist *list = NULL;
 
-    if (!checkInternet() || (!m_Connected && !m_LoggedIn)) {
-        return m_ImapCache->getFolders();
+    if (!checkInternet() || (!m_connected && !m_loggedIn)) {
+        return m_imapCache->getFolders();
     }
 
-    int r = mailimap_list(m_Imap, "", folderName.toStdString().c_str(), &list);
+    int r = mailimap_list(m_imap, "", folderName.toStdString().c_str(), &list);
 
     if (r != MAILIMAP_NO_ERROR) {
         qDebug() << "Could not fetch folder list";
@@ -109,7 +110,7 @@ QList<Folder *> *ImapService::getFolders(QString folderName)
         QString folderparentName = getParentFolderName(foldername, delimiter);
 
         Folder *folder = new Folder(foldername, delimiter);
-        m_Folders.insert(foldername, folder);
+        m_folders.insert(foldername, folder);
         folders.insert(foldername, folder);
 
         if (folderparentName != "") {
@@ -123,18 +124,18 @@ QList<Folder *> *ImapService::getFolders(QString folderName)
 
     mailimap_list_result_free(list);
 
-    m_ImapCache->insertFolders(*folderList);
+    m_imapCache->insertFolders(*folderList);
 
     return folderList;
 }
 
-Folder *ImapService::getFolder(QString foldername)
+Folder *ImapService::getFolder(const QString &foldername)
 {
-    if (!m_Folders.contains(foldername)) {
+    if (!m_folders.contains(foldername)) {
         getFolders();
     }
 
-    return m_Folders.value(foldername);
+    return m_folders.value(foldername);
 }
 
 QList<ssize_t> ImapService::getNonCachedUids(const QString &foldername)
@@ -146,11 +147,12 @@ QList<ssize_t> ImapService::getNonCachedUids(const QString &foldername)
     mailimap_fetch_type *fetchType = mailimap_fetch_type_new_fetch_att_list_empty();
     mailimap_fetch_type_new_fetch_att_list_add(fetchType, mailimap_fetch_att_new_uid());
 
-    r = mailimap_uid_fetch(m_Imap, set, fetchType, &fetchResult);
+    r = mailimap_uid_fetch(m_imap, set, fetchType, &fetchResult);
 
     if (r != MAILIMAP_NO_ERROR) {
-        qDebug() << "get uids";
-        qDebug() << "Errorcode: " << r;
+        qDebug() << "get uids" << r;
+        mailimap_fetch_type_free(fetchType);
+        mailimap_set_free(set);
         return QList<ssize_t>();
     }
 
@@ -186,26 +188,28 @@ QList<ssize_t> ImapService::getNonCachedUids(const QString &foldername)
         uidList.append(uid);
     }
 
-    QList<ssize_t> cachedUidList;
-    cachedUidList = m_ImapCache->getUidList(foldername);
-
-    QSet<ssize_t> cachedUidListSet = QSet<ssize_t>(cachedUidList.begin(), cachedUidList.end());
-    QSet<ssize_t> uidListSet = QSet<ssize_t>(uidList.begin(), uidList.end());
-
-    QSet<ssize_t> nonCachedUidListSet = uidListSet.subtract(cachedUidListSet);
-
-    nonCachedUidList = QList<ssize_t>(nonCachedUidListSet.begin(), nonCachedUidListSet.end());
-
     mailimap_fetch_list_free(fetchResult);
     mailimap_fetch_type_free(fetchType);
     mailimap_set_free(set);
+
+    QList<ssize_t> cachedUidList;
+    cachedUidList = m_imapCache->getUidList(foldername);
+
+    if (cachedUidList.isEmpty()) {
+        return uidList;
+    }
+
+    QSet<ssize_t> cachedUidListSet = QSet<ssize_t>(cachedUidList.begin(), cachedUidList.end());
+    QSet<ssize_t> uidListSet = QSet<ssize_t>(uidList.begin(), uidList.end());
+    QSet<ssize_t> nonCachedUidListSet = uidListSet.subtract(cachedUidListSet);
+    nonCachedUidList = QList<ssize_t>(nonCachedUidListSet.begin(), nonCachedUidListSet.end());
 
     return nonCachedUidList;
 }
 
 QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
     if (!selectFolder(foldername)) {
         return nullptr;
@@ -215,14 +219,15 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
 
     QList<Message *> *msgList;
 
-    msgList = m_ImapCache->getAllMessages(foldername);
+    msgList = m_imapCache->getAllMessages(foldername);
 
     if (msgList == nullptr) {
         msgList = new QList<Message *>();
     }
 
-    if (nonCachedUidList.isEmpty() && checkInternet()) {
-        return msgList;
+    if (nonCachedUidList.isEmpty() && !checkInternet()) {
+        delete msgList;
+        return nullptr;
     }
 
     mailimap_set *set = mailimap_set_new_interval(0, 1);
@@ -239,10 +244,13 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
         }
     }
 
-    int r = mailimap_uid_fetch(m_Imap, set, fetchType, &fetchResult);
+    int r = mailimap_uid_fetch(m_imap, set, fetchType, &fetchResult);
 
     if (r != MAILIMAP_NO_ERROR) {
         qDebug() << "headers code: " << r;
+        mailimap_fetch_type_free(fetchType);
+        mailimap_set_free(set);
+        delete msgList;
         return nullptr;
     }
 
@@ -260,43 +268,7 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
                 if (item->att_data.att_dyn->att_list != NULL) {
                     for (clistiter *dit = clist_begin(item->att_data.att_dyn->att_list); dit != NULL; dit = clist_next(dit)) {
                         mailimap_flag_fetch *flagFetch = (mailimap_flag_fetch *)clist_content(dit);
-                        if (flagFetch && flagFetch->fl_type) {
-                            switch (flagFetch->fl_type) {
-                            case MAILIMAP_FLAG_FETCH_RECENT:
-                                flags->setRecentFlag(true);
-                                break;
-                            }
-                        }
-                        if (flagFetch && flagFetch->fl_flag) {
-                            switch (flagFetch->fl_flag->fl_type) {
-                            case MAILIMAP_FLAG_SEEN:
-                                flags->setSeenFlag(true);
-                                break;
-
-                            case MAILIMAP_FLAG_DELETED:
-                                flags->setDeletedFlag(true);
-                                break;
-
-                            case MAILIMAP_FLAG_ANSWERED:
-                                flags->setAnsweredFlag(true);
-                                break;
-
-                            case MAILIMAP_FLAG_FLAGGED:
-                                break;
-
-                            case MAILIMAP_FLAG_DRAFT:
-                                flags->setDraftFlag(true);
-                                break;
-
-                            case MAILIMAP_FLAG_KEYWORD:
-                                break;
-
-                            case MAILIMAP_FLAG_EXTENSION:
-                                break;
-                            default:
-                                break;
-                            }
-                        }
+                        parseFlags(flagFetch, flags);
                     }
                 }
             }
@@ -314,10 +286,11 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
         }
 
         if (uid == 0) {
+            delete flags;
             continue;
         }
 
-        Message *msg = new Message(m_Email, uid);
+        Message *msg = new Message(m_email, uid);
         msg->setHeaderData(data);
         msg->setFlags(flags);
         msgList->append(msg);
@@ -332,7 +305,7 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
 
 Message *ImapService::getBody(ssize_t uid)
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
     mailimap_set *set;
     mailimap_section *section;
@@ -349,12 +322,15 @@ Message *ImapService::getBody(ssize_t uid)
     mailimap_fetch_type_new_fetch_att_list_add(fetchType, fetchAtt);
     mailimap_fetch_type_new_fetch_att_list_add(fetchType, mailimap_fetch_att_new_flags());
 
-    r = mailimap_uid_fetch(m_Imap, set, fetchType, &fetchResult);
+    r = mailimap_uid_fetch(m_imap, set, fetchType, &fetchResult);
 
     if (r != MAILIMAP_NO_ERROR) {
         qDebug() << "body code: " << r;
+        mailimap_fetch_type_free(fetchType);
+        mailimap_set_free(set);
         return nullptr;
     }
+
     QString data;
     Flags *flags = new Flags();
 
@@ -368,43 +344,8 @@ Message *ImapService::getBody(ssize_t uid)
                 if (item->att_data.att_dyn->att_list != NULL) {
                     for (clistiter *dit = clist_begin(item->att_data.att_dyn->att_list); dit != NULL; dit = clist_next(dit)) {
                         mailimap_flag_fetch *flagFetch = (mailimap_flag_fetch *)clist_content(dit);
-                        if (flagFetch && flagFetch->fl_type) {
-                            switch (flagFetch->fl_type) {
-                            case MAILIMAP_FLAG_FETCH_RECENT:
-                                flags->setRecentFlag(true);
-                                break;
-                            }
-                        }
-                        if (flagFetch && flagFetch->fl_flag) {
-                            switch (flagFetch->fl_flag->fl_type) {
-                            case MAILIMAP_FLAG_SEEN:
-                                flags->setSeenFlag(true);
-                                break;
 
-                            case MAILIMAP_FLAG_DELETED:
-                                flags->setDeletedFlag(true);
-                                break;
-
-                            case MAILIMAP_FLAG_ANSWERED:
-                                flags->setAnsweredFlag(true);
-                                break;
-
-                            case MAILIMAP_FLAG_FLAGGED:
-                                break;
-
-                            case MAILIMAP_FLAG_DRAFT:
-                                flags->setDraftFlag(true);
-                                break;
-
-                            case MAILIMAP_FLAG_KEYWORD:
-                                break;
-
-                            case MAILIMAP_FLAG_EXTENSION:
-                                break;
-                            default:
-                                break;
-                            }
-                        }
+                        parseFlags(flagFetch, flags);
                     }
                 }
             }
@@ -425,17 +366,13 @@ Message *ImapService::getBody(ssize_t uid)
         if (uid == 0) {
             continue;
         }
-
-        if (data.isEmpty()) {
-            continue;
-        }
     }
 
-    Message *msg = new Message(uid);
+    Message *msg = new Message(m_email, uid);
     msg->setFlags(flags);
     msg->setBodyData(data);
 
-    m_ImapCache->insertMessage(m_SelectedFolder, msg);
+    m_imapCache->insertMessage(m_selectedFolder, msg);
 
     mailimap_fetch_list_free(fetchResult);
     mailimap_fetch_type_free(fetchType);
@@ -446,51 +383,57 @@ Message *ImapService::getBody(ssize_t uid)
 
 QList<Message *> *ImapService::getAllMessage(const QString &foldername)
 {
-    QMutexLocker locker(&m_Mutex);
-
     mailimap_set *set;
     mailimap_section *section;
     mailimap_fetch_type *fetchType;
     mailimap_fetch_att *fetchAtt;
     clist *fetchResult = NULL;
 
+    if (!selectFolder(foldername)) {
+        return nullptr;
+    }
+
     QList<ssize_t> nonCachedUids = getNonCachedUids(foldername);
 
-    QList<Message *> *msgList = new QList<Message *>();
+    QList<Message *> *msgList;
+    msgList = m_imapCache->getAllMessages(foldername);
 
-    msgList = m_ImapCache->getAllMessages(foldername);
+    if (nonCachedUids.isEmpty() && msgList == nullptr) {
+        msgList = new QList<Message *>();
+    }
 
-    if (!checkInternet() || (!m_Connected && !m_LoggedIn)) {
-        return msgList;
+    if (nonCachedUids.isEmpty() && !checkInternet()) {
+        delete msgList;
+        return nullptr;
     }
 
     if (msgList == nullptr) {
         msgList = new QList<Message *>();
     }
 
-    if (!selectFolder(foldername)) {
-        return nullptr;
-    }
-
     section = mailimap_section_new(NULL);
     set = mailimap_set_new_interval(0, 1);
     fetchType = mailimap_fetch_type_new_fetch_att_list_empty();
     fetchAtt = mailimap_fetch_att_new_body_peek_section(section);
+    mailimap_fetch_type_new_fetch_att_list_add(fetchType, mailimap_fetch_att_new_flags());
     mailimap_fetch_type_new_fetch_att_list_add(fetchType, mailimap_fetch_att_new_uid());
     mailimap_fetch_type_new_fetch_att_list_add(fetchType, fetchAtt);
 
     if (!nonCachedUids.isEmpty()) {
         set = mailimap_set_new_empty();
-    } else {
+
         for (auto uid : qAsConst(nonCachedUids)) {
             mailimap_set_add_single(set, uid);
         }
     }
 
-    int r = mailimap_uid_fetch(m_Imap, set, fetchType, &fetchResult);
+    int r = mailimap_uid_fetch(m_imap, set, fetchType, &fetchResult);
 
     if (r != MAILIMAP_NO_ERROR) {
         qDebug() << "body code: " << r;
+        mailimap_fetch_type_free(fetchType);
+        mailimap_set_free(set);
+        delete msgList;
         return nullptr;
     }
 
@@ -499,12 +442,19 @@ QList<Message *> *ImapService::getAllMessage(const QString &foldername)
 
         QString data;
         ssize_t uid = 0;
+        Flags *flags = new Flags();
 
         for (clistiter *cur = clist_begin(msg_att->att_list); cur != NULL; cur = clist_next(cur)) {
             mailimap_msg_att_item *item = (mailimap_msg_att_item *)clist_content(cur);
 
-            if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC)
-                continue;
+            if (item->att_type == MAILIMAP_MSG_ATT_ITEM_DYNAMIC) {
+                if (item->att_data.att_dyn->att_list != NULL) {
+                    for (clistiter *dit = clist_begin(item->att_data.att_dyn->att_list); dit != NULL; dit = clist_next(dit)) {
+                        mailimap_flag_fetch *flagFetch = (mailimap_flag_fetch *)clist_content(dit);
+                        parseFlags(flagFetch, flags);
+                    }
+                }
+            }
 
             if (item->att_type == MAILIMAP_MSG_ATT_ITEM_STATIC) {
                 if (item->att_data.att_static->att_type == MAILIMAP_MSG_ATT_BODY_SECTION) {
@@ -520,17 +470,17 @@ QList<Message *> *ImapService::getAllMessage(const QString &foldername)
         }
 
         if (uid == 0) {
+            delete flags;
             continue;
         }
 
-        if (data.isEmpty()) {
-            continue;
-        }
-
-        Message *msg = new Message(m_Email, uid);
+        Message *msg = new Message(m_email, uid);
+        msg->setFlags(flags);
         msg->setBodyData(data);
         msgList->append(msg);
     }
+
+    m_imapCache->insertAllMessages(foldername, msgList);
 
     mailimap_fetch_list_free(fetchResult);
     mailimap_fetch_type_free(fetchType);
@@ -541,14 +491,14 @@ QList<Message *> *ImapService::getAllMessage(const QString &foldername)
 
 bool ImapService::checkInternet()
 {
-    int rv = mailimap_noop(m_Imap);
+    int rv = mailimap_noop(m_imap);
 
     return rv == MAILIMAP_NO_ERROR;
 }
 
 bool ImapService::deleteMessage(const QString &foldername, QList<ssize_t> uidList)
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
     if (!selectFolder(foldername)) {
         return false;
@@ -564,7 +514,7 @@ bool ImapService::deleteMessage(const QString &foldername, QList<ssize_t> uidLis
 
     mailimap_store_att_flags *storeflags = mailimap_store_att_flags_new_add_flags(flaglist);
 
-    int r = mailimap_uid_store(m_Imap, set, storeflags);
+    int r = mailimap_uid_store(m_imap, set, storeflags);
 
     mailimap_set_free(set);
 
@@ -576,13 +526,13 @@ bool ImapService::deleteMessage(const QString &foldername, QList<ssize_t> uidLis
         return false;
     }
 
-    r = mailimap_expunge(m_Imap);
+    r = mailimap_expunge(m_imap);
     return r == MAILIMAP_NO_ERROR;
 }
 
 bool ImapService::moveMessage(const QString &souceFolderName, const QString &destFolderName, QList<ssize_t> uidList)
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
     if (!selectFolder(souceFolderName)) {
         return false;
@@ -593,7 +543,7 @@ bool ImapService::moveMessage(const QString &souceFolderName, const QString &des
         mailimap_set_add_single(set, uid);
     }
 
-    int r = mailimap_uid_move(m_Imap, set, destFolderName.toStdString().c_str());
+    int r = mailimap_uid_move(m_imap, set, destFolderName.toStdString().c_str());
 
     mailimap_set_free(set);
 
@@ -602,15 +552,15 @@ bool ImapService::moveMessage(const QString &souceFolderName, const QString &des
 
 int ImapService::idleStart(const QString &foldername)
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
     if (!selectFolder(foldername)) {
         return -1;
     }
 
-    int rv = mailimap_idle(m_Imap);
+    int rv = mailimap_idle(m_imap);
     if (rv == MAILIMAP_NO_ERROR) {
-        int fd = mailimap_idle_get_fd(m_Imap);
+        int fd = mailimap_idle_get_fd(m_imap);
         return fd;
     }
 
@@ -619,14 +569,51 @@ int ImapService::idleStart(const QString &foldername)
 
 bool ImapService::idleDone()
 {
-    QMutexLocker locker(&m_Mutex);
+    QMutexLocker locker(&m_mutex);
 
-    int rv = mailimap_idle_done(m_Imap);
+    int rv = mailimap_idle_done(m_imap);
 
     return rv == MAILIMAP_NO_ERROR;
 }
 
-QString ImapService::getParentFolderName(QString fullfoldername, QChar delimter)
+void ImapService::startCache()
+{
+    QMutexLocker locker(&m_mutex);
+
+    clist *list = NULL;
+
+    if (!checkInternet() || (!m_connected && !m_loggedIn)) {
+        return;
+    }
+
+    int r = mailimap_list(m_imap, "", "*", &list);
+
+    if (r != MAILIMAP_NO_ERROR) {
+        qDebug() << "Could not fetch folder list";
+        qDebug() << "Errorcode: " << r;
+        return;
+    }
+
+    QStringList folderList;
+
+    for (clistiter *it = clist_begin(list); it != NULL; it = it->next) {
+        mailimap_mailbox_list *mblist = (mailimap_mailbox_list *)clist_content(it);
+        if (mblist) {
+            mailimap_mbx_list_flags *bflags = mblist->mb_flag;
+            if (bflags) {
+                const std::string &foldername = std::string(mblist->mb_name);
+                folderList << QString::fromStdString(foldername);
+            }
+        }
+    }
+
+    for (int i = 0; i < folderList.length(); i++) {
+        qDebug() << folderList.at(i);
+        getAllMessage(folderList.at(i));
+    }
+}
+
+QString ImapService::getParentFolderName(const QString &fullfoldername, const QChar &delimter)
 {
     int lastIndex = fullfoldername.lastIndexOf(delimter);
     if (lastIndex != -1) {
@@ -634,4 +621,45 @@ QString ImapService::getParentFolderName(QString fullfoldername, QChar delimter)
     }
 
     return "";
+}
+
+void ImapService::parseFlags(mailimap_flag_fetch *flagFetch, Flags *flags)
+{
+    if (flagFetch && flagFetch->fl_type) {
+        switch (flagFetch->fl_type) {
+        case MAILIMAP_FLAG_FETCH_RECENT:
+            flags->setRecentFlag(true);
+            break;
+        }
+    }
+    if (flagFetch && flagFetch->fl_flag) {
+        switch (flagFetch->fl_flag->fl_type) {
+        case MAILIMAP_FLAG_SEEN:
+            flags->setSeenFlag(true);
+            break;
+
+        case MAILIMAP_FLAG_DELETED:
+            flags->setDeletedFlag(true);
+            break;
+
+        case MAILIMAP_FLAG_ANSWERED:
+            flags->setAnsweredFlag(true);
+            break;
+
+        case MAILIMAP_FLAG_FLAGGED:
+            break;
+
+        case MAILIMAP_FLAG_DRAFT:
+            flags->setDraftFlag(true);
+            break;
+
+        case MAILIMAP_FLAG_KEYWORD:
+            break;
+
+        case MAILIMAP_FLAG_EXTENSION:
+            break;
+        default:
+            break;
+        }
+    }
 }

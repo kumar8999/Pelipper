@@ -57,3 +57,5 @@ compile_commands.json
 # build files
 ./build/
 build/*
+CMakeLists.txt.user
+CMakeLists.txt.user

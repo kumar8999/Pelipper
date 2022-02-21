@@ -12,6 +12,9 @@ ListView {
     headerPositioning: ListView.OverlayHeader
     highlightRangeMode: ListView.StrictlyEnforceRange
     ScrollBar.vertical: ScrollBar {}
+    spacing: 5
+
+
 
     header: TextField {
         z: 3

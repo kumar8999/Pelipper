@@ -4,9 +4,9 @@
 
 AccountItem::AccountItem(Account *account)
 {
-    m_Account = account;
+    m_account = account;
     setText(account->Email());
-    qDebug() << "account item";
+
     loadFolders();
 }
 
@@ -15,10 +15,10 @@ void AccountItem::loadFolders()
     QtConcurrent::run(this, &AccountItem::getFolders);
 }
 
-void AccountItem::addFolders(QStandardItem *parent, QList<Folder *> folders, QString email)
+void AccountItem::addFolders(QStandardItem *parent, QList<Folder *> folders, const QString &email)
 {
     for (auto *folder : folders) {
-        FolderItem *item = new FolderItem(m_Account, folder);
+        FolderItem *item = new FolderItem(m_account, folder);
         parent->appendRow(item);
         if (folder->hasChildren()) {
             addFolders(item, folder->Children(), email);
@@ -28,16 +28,14 @@ void AccountItem::addFolders(QStandardItem *parent, QList<Folder *> folders, QSt
 
 void AccountItem::getFolders()
 {
-    ImapService *service = m_Account->IMAPService();
+    ImapService *service = m_account->IMAPService();
     QList<Folder *> *folders = service->getFolders("*");
 
-    qDebug() << folders;
-
-    addFolders(this, *folders, m_Account->Email());
+    addFolders(this, *folders, m_account->Email());
     emit foldersLoadFinished();
 }
 
 Account *AccountItem::account() const
 {
-    return m_Account;
+    return m_account;
 }

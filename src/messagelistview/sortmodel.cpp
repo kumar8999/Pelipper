@@ -7,9 +7,14 @@
 
 SortModel::SortModel(QObject *parent)
     : m_loading(false)
+    , m_selectionModel(new QItemSelectionModel(this))
     , QSortFilterProxyModel{parent}
 {
-    m_SelectionModel = new QItemSelectionModel(this);
+}
+
+SortModel::~SortModel()
+{
+    delete m_selectionModel;
 }
 
 bool SortModel::loading() const
@@ -50,7 +55,7 @@ QVariant SortModel::data(const QModelIndex &index, int role) const
     }
     switch (role) {
     case Roles::SelectedRole:
-        return m_SelectionModel->isSelected(index);
+        return m_selectionModel->isSelected(index);
         break;
     }
 
@@ -63,7 +68,7 @@ void SortModel::setSelected(int indexValue)
         return;
 
     QModelIndex index = this->index(indexValue, 0);
-    m_SelectionModel->select(index, QItemSelectionModel::Select);
+    m_selectionModel->select(index, QItemSelectionModel::Select);
     emit dataChanged(index, index);
     emit selectedItemChanged();
 }
@@ -74,17 +79,17 @@ void SortModel::toggleSelected(int indexValue)
         return;
 
     QModelIndex index = this->index(indexValue, 0);
-    m_SelectionModel->select(index, QItemSelectionModel::Toggle);
+    m_selectionModel->select(index, QItemSelectionModel::Toggle);
     emit dataChanged(index, index);
     emit selectedItemChanged();
 }
 
 void SortModel::clearSelections()
 {
-    if (m_SelectionModel->hasSelection()) {
-        QModelIndexList selectedIndex = m_SelectionModel->selectedIndexes();
-        m_SelectionModel->clear();
-        for (auto indexValue : selectedIndex) {
+    if (m_selectionModel->hasSelection()) {
+        QModelIndexList selectedIndex = m_selectionModel->selectedIndexes();
+        m_selectionModel->clear();
+        for (auto indexValue : qAsConst(selectedIndex)) {
             emit dataChanged(indexValue, indexValue);
         }
     }
@@ -98,12 +103,12 @@ void SortModel::selectAll()
         indexList.append(index(row, 0, QModelIndex()));
     }
 
-    if (m_SelectionModel->hasSelection()) {
-        m_SelectionModel->clear();
+    if (m_selectionModel->hasSelection()) {
+        m_selectionModel->clear();
     }
 
     for (auto index : indexList) {
-        m_SelectionModel->select(index, QItemSelectionModel::Select);
+        m_selectionModel->select(index, QItemSelectionModel::Select);
     }
     emit dataChanged(index(0, 0, QModelIndex()), index(rowCount(QModelIndex()) - 1, 0, QModelIndex()));
     emit selectedItemChanged();

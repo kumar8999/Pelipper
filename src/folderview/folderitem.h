@@ -16,7 +16,7 @@ public:
     Folder *folder() const;
 
 private:
-    Account *m_Account;
-    Folder *m_Folder;
+    Account *m_account;
+    Folder *m_folder;
 };
 #endif // FOLDERITEM_H

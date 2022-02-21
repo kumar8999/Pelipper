@@ -2,6 +2,7 @@ import QtQuick 2.0
 import QtQuick.Controls 1.4
 import QtQuick.Layouts 1.12
 import org.kde.kirigami 2.13 as Kirigami
+import QtQuick.Controls.Styles 1.4
 
 TreeView {
     id: treeView
@@ -9,7 +10,11 @@ TreeView {
     Layout.fillWidth: true
     headerVisible: false
     model: session.folderListModel
+    alternatingRowColors: false
+    frameVisible: false
+    anchors.margins: 0
 
+    //    backgroundVisible: false
     TableViewColumn {
         title: "Name"
         role: "display"

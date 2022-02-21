@@ -1,23 +1,22 @@
 #include "flags.h"
 
 Flags::Flags(QObject *parent)
-    : m_SeenFlag(false)
+    : m_seenFlag(false)
     , m_deletedFlag(false)
-    , m_AnsweredFlag(false)
-    , m_DraftFlag(false)
-    , m_RecentFlag(false)
+    , m_answeredFlag(false)
+    , m_draftFlag(false)
+    , m_recentFlag(false)
     , QObject{parent}
-{
-}
+{}
 
-bool Flags::SeenFlag() const
+bool Flags::seenFlag() const
 {
-    return m_SeenFlag;
+    return m_seenFlag;
 }
 
 void Flags::setSeenFlag(bool newSeenFlag)
 {
-    m_SeenFlag = newSeenFlag;
+    m_seenFlag = newSeenFlag;
 }
 
 bool Flags::deletedFlag() const
@@ -30,32 +29,32 @@ void Flags::setDeletedFlag(bool newDeletedFlag)
     m_deletedFlag = newDeletedFlag;
 }
 
-bool Flags::AnsweredFlag() const
+bool Flags::answeredFlag() const
 {
-    return m_AnsweredFlag;
+    return m_answeredFlag;
 }
 
 void Flags::setAnsweredFlag(bool newAnsweredFlag)
 {
-    m_AnsweredFlag = newAnsweredFlag;
+    m_answeredFlag = newAnsweredFlag;
 }
 
-bool Flags::DraftFlag() const
+bool Flags::raftFlag() const
 {
-    return m_DraftFlag;
+    return m_draftFlag;
 }
 
 void Flags::setDraftFlag(bool newDraftFlag)
 {
-    m_DraftFlag = newDraftFlag;
+    m_draftFlag = newDraftFlag;
 }
 
-bool Flags::RecentFlag() const
+bool Flags::recentFlag() const
 {
-    return m_RecentFlag;
+    return m_recentFlag;
 }
 
 void Flags::setRecentFlag(bool newRecentFlag)
 {
-    m_RecentFlag = newRecentFlag;
+    m_recentFlag = newRecentFlag;
 }

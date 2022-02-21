@@ -2,38 +2,30 @@
 
 #include <QDebug>
 
-Message::Message(QString accountEmail, ssize_t uid, QObject *parent)
+Message::Message(const QString &accountEmail, ssize_t uid, QObject *parent)
     : m_AccountEmail(accountEmail)
     , m_Uid(uid)
     , QObject(parent)
 {
+    m_from = nullptr;
+    m_flags = nullptr;
 }
 
-Message::Message(ssize_t uid, QObject *parent)
-    : m_Uid(uid)
-    , QObject(parent)
+void Message::setHeaderData(const QString &data)
 {
-}
-
-void Message::setHeaderData(QString data)
-{
-    m_HeaderData = data;
+    m_headerData = data;
     parseHeader();
 }
 
 void Message::parseHeader()
 {
     mailmime *mime = NULL;
-    size_t indx = 0;
-    int r = mailmime_parse(m_HeaderData.toStdString().c_str(), m_HeaderData.size(), &indx, &mime);
+    size_t index = 0;
+    int r = mailmime_parse(m_headerData.toStdString().c_str(), m_headerData.size(), &index, &mime);
 
     if (r != MAILIMF_NO_ERROR) {
-        qDebug() << "Could not parse";
-        qDebug() << "Error code" << r;
-        return;
-    }
-
-    if (mime == NULL) {
+        qDebug() << "Could not parse" << r;
+        mailmime_free(mime);
         return;
     }
 
@@ -42,36 +34,35 @@ void Message::parseHeader()
             mailimf_fields *fields = mime->mm_data.mm_message.mm_fields;
 
             if (clist_begin(fields->fld_list) != NULL) {
-                for (clistiter *it = clist_begin(fields->fld_list); it != NULL; it = clist_next(it)) {
-                    mailimf_field *field = (mailimf_field *)clist_content(it);
+                for (clistiter *it = clist_begin(fields->fld_list); it != NULL;
+                     it = clist_next(it)) {
+                    mailimf_field *field = (mailimf_field *) clist_content(it);
 
                     switch (field->fld_type) {
                     case MAILIMF_FIELD_ORIG_DATE: {
-                        struct mailimf_date_time *datetime = field->fld_data.fld_orig_date->dt_date_time;
+                        struct mailimf_date_time *datetime = field->fld_data.fld_orig_date
+                                                                 ->dt_date_time;
                         QDate date = QDate(datetime->dt_year, datetime->dt_month, datetime->dt_day);
                         QTime time = QTime(datetime->dt_hour, datetime->dt_min, datetime->dt_sec);
                         m_DateTime = QDateTime(date, time);
                         break;
                     }
                     case MAILIMF_FIELD_FROM: {
-                        m_From = parseFrom(field->fld_data.fld_from);
+                        m_from = parseFrom(field->fld_data.fld_from);
                         break;
                     }
 
                     case MAILIMF_FIELD_TO: {
-                        QStringList toField;
                         m_To = parseTo(field->fld_data.fld_to);
                         break;
                     }
 
                     case MAILIMF_FIELD_CC: {
-                        QStringList ccList;
                         m_cc = parseAddressList(field->fld_data.fld_cc->cc_addr_list);
                         break;
                     }
 
                     case MAILIMF_FIELD_BCC: {
-                        QStringList bccList;
                         m_Bcc = parseAddressList(field->fld_data.fld_bcc->bcc_addr_list);
                         break;
                     }
@@ -100,10 +91,10 @@ void Message::parseHeader()
     mailmime_free(mime);
 }
 
-void Message::setBodyData(QString data)
+void Message::setBodyData(const QString &data)
 {
-    m_Data = data;
-    m_HeaderData = data;
+    m_data = data;
+    m_headerData = data;
     parseHeader();
     parseBody();
 }
@@ -113,9 +104,11 @@ void Message::parseBody()
     struct mailmime *mime = NULL;
     size_t index = 0;
 
-    mailmime_parse(m_Data.toStdString().c_str(), m_Data.size(), &index, &mime);
+    int r = mailmime_parse(m_data.toStdString().c_str(), m_data.size(), &index, &mime);
 
-    if (mime == NULL) {
+    if (r != MAILIMF_NO_ERROR) {
+        qDebug() << "parse body error code" << r;
+        mailmime_free(mime);
         return;
     }
 
@@ -156,7 +149,7 @@ QList<Contact *> Message::parseMailBoxList(mailimf_mailbox_list *mbList)
 
     for (cur = clist_begin(mbList->mb_list); cur != NULL; cur = clist_next(cur)) {
         struct mailimf_mailbox *mb;
-        mb = (mailimf_mailbox *)clist_content(cur);
+        mb = (mailimf_mailbox *) clist_content(cur);
         Contact *contact = new Contact();
 
         if (mb->mb_display_name != NULL)
@@ -176,7 +169,7 @@ QList<Contact *> Message::parseAddressList(mailimf_address_list *addressList)
     QList<Contact *> addrList;
 
     for (cur = clist_begin(addressList->ad_list); cur != NULL; cur = clist_next(cur)) {
-        struct mailimf_address *addr = (mailimf_address *)clist_content(cur);
+        struct mailimf_address *addr = (mailimf_address *) clist_content(cur);
 
         addrList = parseAddress(addr);
     }
@@ -192,10 +185,11 @@ QList<Contact *> Message::parseAddress(mailimf_address *addr)
     case MAILIMF_ADDRESS_GROUP: {
         clistiter *it;
 
-        for (it = clist_begin(addr->ad_data.ad_group->grp_mb_list->mb_list); it != NULL; it = clist_next(it)) {
+        for (it = clist_begin(addr->ad_data.ad_group->grp_mb_list->mb_list); it != NULL;
+             it = clist_next(it)) {
             struct mailimf_mailbox *mb;
 
-            mb = (mailimf_mailbox *)clist_content(it);
+            mb = (mailimf_mailbox *) clist_content(it);
             Contact *contact = new Contact();
             if (mb->mb_display_name != NULL) {
                 contact->setHostname(mimeToUtf8(mb->mb_display_name));
@@ -294,8 +288,9 @@ void Message::parseMime(mailmime *mime, int depth)
         parseSingleMime(mime, mimeType);
         break;
     case MAILMIME_MULTIPLE:
-        for (clistiter *cur = clist_begin(mime->mm_data.mm_multipart.mm_mp_list); cur != NULL; cur = clist_next(cur)) {
-            parseMime((mailmime *)clist_content(cur), depth + 1);
+        for (clistiter *cur = clist_begin(mime->mm_data.mm_multipart.mm_mp_list); cur != NULL;
+             cur = clist_next(cur)) {
+            parseMime((mailmime *) clist_content(cur), depth + 1);
         }
         break;
     case MAILMIME_MESSAGE:
@@ -317,7 +312,6 @@ void Message::parseMime(mailmime *mime, int depth)
 void Message::parseSingleMime(mailmime *mime, const QString &mimeType)
 {
     QString fileName;
-    QString contentId;
     QString charset;
     bool isAttachment = false;
 
@@ -333,10 +327,15 @@ void Message::parseSingleMime(mailmime *mime, const QString &mimeType)
         size_t index = 0;
         char *parsedStr = NULL;
         size_t parsedLen = 0;
-        int rv = mailmime_part_parse(data->dt_data.dt_text.dt_data, data->dt_data.dt_text.dt_length, &index, data->dt_encoding, &parsedStr, &parsedLen);
+        int rv = mailmime_part_parse(data->dt_data.dt_text.dt_data,
+                                     data->dt_data.dt_text.dt_length,
+                                     &index,
+                                     data->dt_encoding,
+                                     &parsedStr,
+                                     &parsedLen);
 
         if (rv == MAILIMF_NO_ERROR) {
-            BodyPart *bodypart = new BodyPart();
+            MessagePart *bodypart = new MessagePart();
             bodypart->m_Charset = charset;
             bodypart->m_MimeType = mimeType;
             bodypart->m_Size = std::string(parsedStr, parsedLen).size();
@@ -366,7 +365,10 @@ void Message::parseSingleMime(mailmime *mime, const QString &mimeType)
     }
 }
 
-void Message::parseMimeFields(mailmime *mime, QString &filename, QString &charset, bool &isattachment)
+void Message::parseMimeFields(mailmime *mime,
+                              QString &filename,
+                              QString &charset,
+                              bool &isattachment)
 {
     mailmime_single_fields fields;
     memset(&fields, 0, sizeof(mailmime_single_fields));
@@ -385,10 +387,6 @@ void Message::parseMimeFields(mailmime *mime, QString &filename, QString &charse
         } else if (fields.fld_content_name != NULL) {
             filename = QString::fromStdString(fields.fld_content_name);
         }
-
-        //        if (fields.fld_id != NULL) {
-        //            contentId = QString::fromStdString(fields.fld_id);
-        //        }
 
         if (fields.fld_content_charset != NULL) {
             charset = QString::fromStdString(fields.fld_content_charset).toLower();
@@ -425,7 +423,12 @@ QString Message::mimeToUtf8(std::string str)
     const char *charset = "UTF-8";
     char *cdecoded = NULL;
     size_t curtoken = 0;
-    int rv = mailmime_encoded_phrase_parse(charset, str.c_str(), str.size(), &curtoken, charset, &cdecoded);
+    int rv = mailmime_encoded_phrase_parse(charset,
+                                           str.c_str(),
+                                           str.size(),
+                                           &curtoken,
+                                           charset,
+                                           &cdecoded);
     if ((rv == MAILIMF_NO_ERROR) && (cdecoded != NULL)) {
         std::string decoded(cdecoded);
         free(cdecoded);
@@ -437,17 +440,17 @@ QString Message::mimeToUtf8(std::string str)
 
 Flags *Message::flags() const
 {
-    return m_Flags;
+    return m_flags;
 }
 
 void Message::setFlags(Flags *newFlags)
 {
-    m_Flags = newFlags;
+    m_flags = newFlags;
 }
 
 const QString &Message::Data() const
 {
-    return m_Data;
+    return m_data;
 }
 
 const QString &Message::PlainText() const
@@ -508,7 +511,7 @@ const QString &Message::MsgID() const
 
 Contact *Message::From() const
 {
-    return m_From;
+    return m_from;
 }
 
 const QString &Message::Subject() const

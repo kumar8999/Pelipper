@@ -10,7 +10,7 @@ FolderListModel::FolderListModel(QObject *parent)
     , QStandardItemModel(parent)
 {
     auto session = Session::getInstance();
-    m_Settings = new Settings(this);
+    m_settings = new Settings(this);
 
     connect(session, &Session::accountAdded, this, &FolderListModel::addAccount);
 }
@@ -28,7 +28,7 @@ void FolderListModel::selectFolder(QModelIndex index)
 
         accountFolder->insert(account, item_->folder());
 
-        m_Settings->setSelectedFolder(account->Email(), item_->folder()->FullName());
+        m_settings->setSelectedFolder(account->Email(), item_->folder()->FullName());
 
         emit folderSelected(accountFolder);
     }
@@ -53,35 +53,29 @@ void FolderListModel::onFoldersLoadFinished()
 
     QString email;
     QString foldername;
-    m_Settings->getSelectedFolder(email, foldername);
+    m_settings->getSelectedFolder(email, foldername);
 
-    selectFolderThread.cancel();
+    m_selectFolderThread.cancel();
+    QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
 
-    if (email == account->Email()) {
-        selectFolderThread = QtConcurrent::run([&]() {
-            QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
+    //    if (email == account->Email()) {
+    //        m_selectFolderThread = QtConcurrent::run([&]() {
+    //            Folder *folder = service->getFolder(foldername);
 
-            Folder *folder = service->getFolder(foldername);
+    //            if (folder != nullptr) {
+    //                accountFolder->insert(account, folder);
+    //            }
+    //        });
+    //    } else {
+    //        m_selectFolderThread = QtConcurrent::run([&]() {
+    //            Folder *folder = service->getFolder("INBOX");
 
-            if (folder != nullptr) {
-                accountFolder->insert(account, folder);
-
-                emit folderSelected(accountFolder);
-            }
-        });
-    } else {
-        selectFolderThread = QtConcurrent::run([&]() {
-            QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
-
-            Folder *folder = service->getFolder("INBOX");
-
-            if (folder != nullptr) {
-                accountFolder->insert(account, folder);
-
-                emit folderSelected(accountFolder);
-            }
-        });
-    }
+    //            if (folder != nullptr) {
+    //                accountFolder->insert(account, folder);
+    //            }
+    //        });
+    //    }
+    //    emit folderSelected(accountFolder);
 }
 
 bool FolderListModel::loading() const

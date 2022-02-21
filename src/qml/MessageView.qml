@@ -7,6 +7,7 @@ import QtWebView 1.15
 Kirigami.Page {
 
     Kirigami.Theme.colorSet: Kirigami.Theme.View
+    padding: 0
 
     header: Controls.Pane {
         visible: session.hasMsgLoaded
@@ -53,10 +54,7 @@ Kirigami.Page {
         anchors.centerIn: parent
         text: "No Message Selected"
     }
-
     function onMessageReady() {
-        console.log(session.messageItem.from)
-        console.log(session.messageItem.subject)
         fromLabel.text = session.messageItem.from
         toLabel.text = session.messageItem.to
         dateLabel.text = session.messageItem.datetime.toLocaleDateString()

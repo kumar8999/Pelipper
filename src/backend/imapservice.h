@@ -11,55 +11,75 @@
 
 #include <libetpan/libetpan.h>
 
+enum ConnectionType { ConnectionTypeNone, ConnectionTypeStartTLS, ConnectionSSL };
+
 class ImapService : public QObject
 {
     Q_OBJECT
 public:
-    explicit ImapService(const QString &email, const QString &password, const QString &server, int port);
+    explicit ImapService(const QString &email,
+                         const QString &password,
+                         const QString &server,
+                         int port,
+                         ConnectionType connectionType,
+                         QObject *parent = nullptr);
     ~ImapService();
 
     bool connect();
 
     bool login();
+
     bool logout();
 
-    bool selectFolder(QString folderName);
-    QList<Folder *> *getFolders(QString folderName = "*");
-    Folder *getFolder(QString foldername);
+    bool selectFolder(const QString &folderName);
+
+    QList<Folder *> *getFolders(const QString &folderName = "*");
+    Folder *getFolder(const QString &foldername);
 
     QList<ssize_t> getNonCachedUids(const QString &foldername);
-    Message *getBody(ssize_t uid);
-    QList<Message *> *getAllMessage(const QString &foldername);
 
     QList<Message *> *getAllHeaders(const QString &foldername);
+
+    Message *getBody(ssize_t uid);
+
+    QList<Message *> *getAllMessage(const QString &foldername);
 
     bool checkInternet();
 
     bool deleteMessage(const QString &foldername, QList<ssize_t> uidList);
-    bool moveMessage(const QString &souceFolderName, const QString &destFolderName, QList<ssize_t> uidList);
+
+    bool moveMessage(const QString &souceFolderName,
+                     const QString &destFolderName,
+                     QList<ssize_t> uidList);
 
     int idleStart(const QString &foldername);
     bool idleDone();
 
-private:
-    QString getParentFolderName(QString fullfoldername, QChar delimter);
+    void startCache();
 
 private:
-    QString m_Email;
-    QString m_Password;
-    QString m_Server;
-    int m_Port;
+    QString getParentFolderName(const QString &fullfoldername, const QChar &delimter);
 
-    bool m_Connected;
-    bool m_LoggedIn;
-    QString m_SelectedFolder;
+    void parseFlags(mailimap_flag_fetch *flagFetch, Flags *flags);
 
-    mailimap *m_Imap;
-    QMutex m_Mutex;
+private:
+    QString m_email;
+    QString m_password;
+    QString m_server;
+    int m_port;
 
-    ImapCache *m_ImapCache;
+    ConnectionType m_connectionType;
 
-    QMap<QString, Folder *> m_Folders;
+    bool m_connected;
+    bool m_loggedIn;
+    QString m_selectedFolder;
+
+    mailimap *m_imap;
+    QMutex m_mutex;
+
+    ImapCache *m_imapCache;
+
+    QMap<QString, Folder *> m_folders;
 };
 
 #endif // IMAP_H

@@ -25,13 +25,13 @@ public:
 
     ImapService *IMAPService() const;
 
-    ImapService *createService();
-
     const QString &Email() const;
 
     IdleManager *idleManager() const;
 
     SmtpService *SMTPService() const;
+
+    void startCacheService();
 
 private:
     QString m_Username;

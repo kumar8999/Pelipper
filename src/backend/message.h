@@ -9,7 +9,7 @@
 #include <QDateTime>
 #include <QObject>
 
-class BodyPart
+class MessagePart
 {
 public:
     QString m_TextHtml;
@@ -27,12 +27,11 @@ class Message : public QObject
     Q_OBJECT
 
 public:
-    explicit Message(QString accountEmail, ssize_t uid, QObject *parent = nullptr);
-    Message(ssize_t uid, QObject *parent = nullptr);
+    Message(const QString &accountEmail, ssize_t uid, QObject *parent = nullptr);
 
-    void setHeaderData(QString data);
+    void setHeaderData(const QString &data);
 
-    void setBodyData(QString data);
+    void setBodyData(const QString &data);
 
     ssize_t Uid() const;
     void setUid(ssize_t newUid);
@@ -94,23 +93,23 @@ private:
 
 private:
     QString m_AccountEmail;
-    QString m_HeaderData;
-    QString m_Data;
+    QString m_headerData;
+    QString m_data;
 
     ssize_t m_Uid;
     QDateTime m_DateTime;
     QString m_Subject;
     QString m_MsgID;
-    Contact *m_From;
+    Contact *m_from;
     QList<Contact *> m_To;
     QList<Contact *> m_cc;
     QList<Contact *> m_Bcc;
     QList<Contact *> m_ReplyTo;
 
-    Flags *m_Flags;
+    Flags *m_flags;
 
     QString m_Html;
     QString m_PlainText;
-    QList<BodyPart *> m_BodyParts;
+    QList<MessagePart *> m_BodyParts;
 };
 #endif // MESSAGE_H

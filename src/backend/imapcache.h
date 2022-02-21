@@ -16,11 +16,11 @@ public:
 
     QList<Folder *> *getFolders();
 
-    bool insertFolders(QList<Folder *> folderList);
+    bool insertFolders(const QList<Folder *> &folderList);
 
-    QList<ssize_t> getUidList(QString foldername);
+    QList<ssize_t> getUidList(const QString &foldername);
 
-    QList<Message *> *getAllMessages(QString foldername);
+    QList<Message *> *getAllMessages(const QString &foldername);
 
     Message *getMessage(const QString &foldername, ssize_t uid, QString &data);
 
@@ -30,7 +30,7 @@ public:
 
     bool deleteMessage(const QString &foldername, QList<ssize_t> uidList);
 
-    QString getParentFolderName(QString fullfoldername, QChar delimter);
+    QString getParentFolderName(const QString &fullfoldername, const QChar &delimter);
 
 private:
     QString m_Email;

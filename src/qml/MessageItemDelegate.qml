@@ -14,52 +14,63 @@ ItemDelegate {
     signal doubleClicked
 
     id: item_delegate
-    height: 40
+    height: 45
 
     Rectangle {
         anchors.fill: parent
-        visible: highlightItem
-        color: Kirigami.Theme.highlightColor
-        opacity: 0.5
-    }
+        Kirigami.Theme.colorSet: Kirigami.Theme.View
+        radius: 5
 
-    Label {
-        id: title
-        text: sender
-        font.bold: seenflag ? false : true
-        wrapMode: Text.WrapAnywhere
-        anchors.leftMargin: 10
-        width: parent.width
-        enabled: false
-    }
-
-    Label {
-        id: subtitle
-        anchors.top: title.bottom
-        anchors.leftMargin: 10
-        text: subject
-        font.bold: seenflag ? false : true
-        elide: Text.ElideRight
-        width: parent.width
-    }
-
-    Label {
-        id: trailing
-        text: dateString
-        anchors.right: parent.right
-        anchors.rightMargin: 10
-        wrapMode: Text.WrapAnywhere
-    }
-
-    MouseArea {
-        id: item_mousearea
-        anchors.fill: parent
-        onClicked: {
-            item_delegate.clicked(mouse)
+        Rectangle {
+            anchors.fill: parent
+            visible: highlightItem
+            color: Kirigami.Theme.highlightColor
+            opacity: 0.5
+            radius: 5
         }
 
-        onDoubleClicked: {
-            item_delegate.doubleClicked()
+        Label {
+            id: title
+            x: 10
+            y: 3
+            text: sender
+            font.bold: seenflag ? false : true
+            wrapMode: Text.WrapAnywhere
+            width: parent.width
+            enabled: false
+        }
+
+        Label {
+            id: subtitle
+            x: 10
+            y: 3
+            anchors.top: title.bottom
+            text: subject
+            font.bold: seenflag ? false : true
+            elide: Text.ElideRight
+            width: parent.width - 10
+        }
+
+        Label {
+            id: trailing
+            y: 3
+            text: dateString
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            wrapMode: Text.WrapAnywhere
+        }
+
+        MouseArea {
+            id: item_mousearea
+            anchors.fill: parent
+
+            onClicked: {
+                item_delegate.clicked(mouse)
+            }
+
+            onDoubleClicked: {
+                item_delegate.doubleClicked()
+            }
         }
     }
 }

@@ -22,13 +22,13 @@ signals:
     void foldersLoadFinished();
 
 private:
-    void addFolders(QStandardItem *parent, QList<Folder *> folders, QString email);
+    void addFolders(QStandardItem *parent, QList<Folder *> folders, const QString &email);
 
     void getFolders();
 
 private:
-    QString m_Email;
-    Account *m_Account;
+    QString m_email;
+    Account *m_account;
 };
 
 #endif // ACCOUNTITEM_H
