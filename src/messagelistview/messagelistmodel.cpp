@@ -93,6 +93,16 @@ void MessageListModel::onFolderSelected(QHash<Account *, Folder *> *accountFolde
     m_future = QtConcurrent::run(this, &MessageListModel::loadMessage, accountFolder);
 }
 
+void MessageListModel::setSeenFlag(int row)
+{
+    Message *message = m_messageList->at(row);
+
+    qDebug() << message->Subject();
+
+    Flags *flag = message->flags();
+    flag->setSeenFlag(true);
+}
+
 void MessageListModel::onMessageReadyFinished(QList<Message *> *msgList)
 {
     setLoading(false);

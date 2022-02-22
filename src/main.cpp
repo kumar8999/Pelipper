@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QQmlApplicationEngine engine;
 
-    //    qmlRegisterType<DocumentHandler>("mail.widgets", 1, 0, "DocumentHandler");
+    qmlRegisterType<DocumentHandler>("mail.widgets", 1, 0, "DocumentHandler");
 
     Application *application = new Application();
     engine.rootContext()->setContextProperty("session", application);

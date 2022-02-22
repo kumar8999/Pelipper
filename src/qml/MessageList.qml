@@ -6,15 +6,31 @@ import org.kde.kirigami 2.17 as Kirigami
 ListView {
     property int mulBegin: 0
 
-    id: control
+    id: messageListView
     model: session.messageListModel
     snapMode: ListView.SnapToItem
     headerPositioning: ListView.OverlayHeader
     highlightRangeMode: ListView.StrictlyEnforceRange
     ScrollBar.vertical: ScrollBar {}
-    spacing: 5
 
+    section.property: "size"
+    section.criteria: ViewSection.FullString
+    section.delegate: sectionHeading
 
+    Component {
+        id: sectionHeading
+        Rectangle {
+            width: container.width
+            height: childrenRect.height
+            color: "lightsteelblue"
+
+            Text {
+                text: "section"
+                font.bold: true
+                font.pixelSize: 20
+            }
+        }
+    }
 
     header: TextField {
         z: 3
@@ -36,8 +52,8 @@ ListView {
     }
 
     delegate: MessageItemDelegate {
-        id: item_delegate_
-        width: control.width
+        id: listItem
+        width: messageListView.width
 
         highlightItem: model.Selected
         sender: model.Sender
@@ -47,33 +63,31 @@ ListView {
         recentflag: model.Recent
 
         onDoubleClicked: {
+            messageListView.currentIndex = index
+            session.messageListModel.setSeenFlag(index)
             session.selectedMessage(model.Email, model.Uid)
         }
 
         onClicked: {
             if (mouse.modifiers & Qt.ControlModifier) {
-                control.model.toggleSelected(model.index)
-                control.mulBegin = index
+                messageListView.model.toggleSelected(model.index)
+                messageListView.mulBegin = index
             } else if (mouse.modifiers & Qt.ShiftModifier) {
                 var i
-                if (index > control.mulBegin) {
-                    for (i = control.mulBegin; i <= index; i++) {
-                        control.model.setSelected(i)
+                if (index > messageListView.mulBegin) {
+                    for (i = messageListView.mulBegin; i <= index; i++) {
+                        messageListView.model.setSelected(i)
                     }
                 } else {
-                    for (i = index; i <= control.mulBegin; i++) {
-                        control.model.setSelected(i)
+                    for (i = index; i <= messageListView.mulBegin; i++) {
+                        messageListView.model.setSelected(i)
                     }
                 }
             } else {
-                console.log("selected")
-
-                control.model.clearSelections()
-                control.model.toggleSelected(model.index)
+                messageListView.model.clearSelections()
+                messageListView.model.toggleSelected(model.index)
                 if (model.Selected)
-                    control.mulBegin = index
-
-                console.log(model.Selected)
+                    messageListView.mulBegin = index
             }
 
             //            var emailList = control.model.selectedMessageAccounts()
@@ -86,7 +100,6 @@ ListView {
             //            }
         }
     }
-
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.RightButton

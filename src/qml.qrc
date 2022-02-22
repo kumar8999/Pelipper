@@ -9,5 +9,6 @@
         <file>qml/MessageView.qml</file>
         <file>qml/FolderListModal.qml</file>
         <file>qml/ComposerWidget.qml</file>
+        <file>qml/AddressBarComposerWidget.qml</file>
     </qresource>
 </RCC>

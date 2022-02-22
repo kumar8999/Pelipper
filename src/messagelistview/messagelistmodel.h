@@ -35,6 +35,8 @@ public:
 public slots:
     void onFolderSelected(QHash<Account *, Folder *> *accountFolder);
 
+    void setSeenFlag(int row);
+
 signals:
     void loadingChanged();
 

@@ -13,20 +13,18 @@ ItemDelegate {
     signal clicked(var mouse)
     signal doubleClicked
 
-    id: item_delegate
+    id: listItem
     height: 45
 
     Rectangle {
         anchors.fill: parent
         Kirigami.Theme.colorSet: Kirigami.Theme.View
-        radius: 5
 
         Rectangle {
             anchors.fill: parent
             visible: highlightItem
             color: Kirigami.Theme.highlightColor
             opacity: 0.5
-            radius: 5
         }
 
         Label {
@@ -60,16 +58,27 @@ ItemDelegate {
             wrapMode: Text.WrapAnywhere
         }
 
+        Kirigami.Separator {
+            anchors {
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                leftMargin: Kirigami.Units.largeSpacing
+                rightMargin: Kirigami.Units.largeSpacing
+            }
+            weight: Kirigami.Separator.Weight.Light
+        }
+
         MouseArea {
             id: item_mousearea
             anchors.fill: parent
 
             onClicked: {
-                item_delegate.clicked(mouse)
+                listItem.clicked(mouse)
             }
 
             onDoubleClicked: {
-                item_delegate.doubleClicked()
+                listItem.doubleClicked()
             }
         }
     }

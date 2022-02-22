@@ -114,6 +114,19 @@ void SortModel::selectAll()
     emit selectedItemChanged();
 }
 
+void SortModel::setSeenFlag(int indexValue)
+{
+    if (indexValue < 0)
+        return;
+
+    QModelIndex index = this->index(indexValue, 0);
+    auto _model = static_cast<MessageListModel *>(sourceModel());
+    QModelIndex sourceIndex = mapToSource(index);
+    _model->setSeenFlag(sourceIndex.row());
+
+    emit dataChanged(index, index);
+}
+
 void SortModel::setModel(QAbstractListModel *model)
 {
     setSourceModel(model);

@@ -32,6 +32,8 @@ public slots:
 
     void selectAll();
 
+    void setSeenFlag(int indexValue);
+
 signals:
     void loadingChanged();
 
