@@ -26,25 +26,32 @@ QVariant MessageListModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    Message *header = m_messageList->at(index.row());
-    Flags *flag = header->flags();
+    Message *message = m_messageList->at(index.row());
+    MessageHeader *header = m_messageList->at(index.row())->header();
+    Flags *flag = message->flags();
+
+    if (header == nullptr) {
+        return QVariant();
+    }
+
+    qDebug() << header->dateTime();
 
     switch (role) {
     case Roles::SenderRole: {
-        const Contact *contact = header->From();
-        if (contact->Hostname().isEmpty()) {
-            return contact->Address();
+        const Address *address = header->from();
+        if (address->displayName().isEmpty()) {
+            return address->address();
         }
-        return contact->Hostname();
+        return address->displayName();
     }
     case Roles::SubjectRole:
-        return header->Subject();
+        return header->subject();
     case Roles::DateRole:
-        return header->DateTime();
+        return QVariant(header->dateTime());
     case Roles::UIDRole:
-        return QVariant::fromValue(header->Uid());
+        return QVariant::fromValue(message->uid());
     case Roles::EmailRole:
-        return header->AccountEmail();
+        return message->accountEmail();
     case Roles::MessageSeenRole:
         return flag->seenFlag();
     case Roles::MessageRecentRole:
@@ -96,8 +103,6 @@ void MessageListModel::onFolderSelected(QHash<Account *, Folder *> *accountFolde
 void MessageListModel::setSeenFlag(int row)
 {
     Message *message = m_messageList->at(row);
-
-    qDebug() << message->Subject();
 
     Flags *flag = message->flags();
     flag->setSeenFlag(true);

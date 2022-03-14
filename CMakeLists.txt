@@ -44,6 +44,9 @@ set(PROJECT_SOURCES
     src/folderview/folderlistmodel.h src/folderview/folderlistmodel.cpp
     src/backend/contact.h src/backend/contact.cpp
     src/backend/flags.h src/backend/flags.cpp
+    src/backend/address.h src/backend/address.cpp
+    src/backend/messagepart.h src/backend/messagepart.cpp
+    src/backend/messageheaders.h src/backend/messageheaders.cpp
     src/backend/message.h src/backend/message.cpp
     src/backend/folder.h src/backend/folder.cpp
     src/backend/cachemanager.h src/backend/cachemanager.cpp

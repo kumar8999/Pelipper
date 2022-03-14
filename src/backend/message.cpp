@@ -3,103 +3,102 @@
 #include <QDebug>
 
 Message::Message(const QString &accountEmail, ssize_t uid, QObject *parent)
-    : m_AccountEmail(accountEmail)
-    , m_Uid(uid)
+    : m_accountEmail(accountEmail)
+    , m_uid(uid)
     , QObject(parent)
 {
-    m_from = nullptr;
-    m_flags = nullptr;
 }
 
-void Message::setHeaderData(const QString &data)
-{
-    m_headerData = data;
-    parseHeader();
-}
-
-void Message::parseHeader()
-{
-    mailmime *mime = NULL;
-    size_t index = 0;
-    int r = mailmime_parse(m_headerData.toStdString().c_str(), m_headerData.size(), &index, &mime);
-
-    if (r != MAILIMF_NO_ERROR) {
-        qDebug() << "Could not parse" << r;
-        mailmime_free(mime);
-        return;
-    }
-
-    if (mime->mm_type == MAILMIME_MESSAGE) {
-        if (mime->mm_data.mm_message.mm_fields) {
-            mailimf_fields *fields = mime->mm_data.mm_message.mm_fields;
-
-            if (clist_begin(fields->fld_list) != NULL) {
-                for (clistiter *it = clist_begin(fields->fld_list); it != NULL;
-                     it = clist_next(it)) {
-                    mailimf_field *field = (mailimf_field *) clist_content(it);
-
-                    switch (field->fld_type) {
-                    case MAILIMF_FIELD_ORIG_DATE: {
-                        struct mailimf_date_time *datetime = field->fld_data.fld_orig_date
-                                                                 ->dt_date_time;
-                        QDate date = QDate(datetime->dt_year, datetime->dt_month, datetime->dt_day);
-                        QTime time = QTime(datetime->dt_hour, datetime->dt_min, datetime->dt_sec);
-                        m_DateTime = QDateTime(date, time);
-                        break;
-                    }
-                    case MAILIMF_FIELD_FROM: {
-                        m_from = parseFrom(field->fld_data.fld_from);
-                        break;
-                    }
-
-                    case MAILIMF_FIELD_TO: {
-                        m_To = parseTo(field->fld_data.fld_to);
-                        break;
-                    }
-
-                    case MAILIMF_FIELD_CC: {
-                        m_cc = parseAddressList(field->fld_data.fld_cc->cc_addr_list);
-                        break;
-                    }
-
-                    case MAILIMF_FIELD_BCC: {
-                        m_Bcc = parseAddressList(field->fld_data.fld_bcc->bcc_addr_list);
-                        break;
-                    }
-
-                    case MAILIMF_FIELD_SUBJECT: {
-                        m_Subject = mimeToUtf8(field->fld_data.fld_subject->sbj_value);
-                        break;
-                    }
-
-                    case MAILIMF_FIELD_MESSAGE_ID:
-                        m_MsgID = mimeToUtf8(field->fld_data.fld_message_id->mid_value);
-                        break;
-
-                    case MAILIMF_FIELD_REPLY_TO: {
-                        m_ReplyTo = parseAddressList(field->fld_data.fld_reply_to->rt_addr_list);
-                        break;
-                    }
-                    default:
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    mailmime_free(mime);
-}
-
-void Message::setBodyData(const QString &data)
+void Message::parseFromData(const QString &data)
 {
     m_data = data;
-    m_headerData = data;
-    parseHeader();
-    parseBody();
+    parseData();
 }
 
-void Message::parseBody()
+void Message::parseHeaderFields(mailimf_fields *headerFields)
+{
+    if (headerFields) {
+        mailimf_single_fields singleFields;
+        mailimf_single_fields_init(&singleFields, headerFields);
+
+        m_header = new MessageHeader();
+
+        // date field
+        if (singleFields.fld_orig_date != NULL) {
+            mailimf_orig_date *fldDate = singleFields.fld_orig_date;
+            mailimf_date_time *datetime = fldDate->dt_date_time;
+
+            QDate date = QDate(datetime->dt_year, datetime->dt_month, datetime->dt_day);
+            QTime time = QTime(datetime->dt_hour, datetime->dt_min, datetime->dt_sec);
+
+            qDebug() << "date time" << QDateTime(date, time);
+            m_header->setDateTime(QDateTime(date, time));
+        }
+
+        // from field
+        if (singleFields.fld_from != NULL) {
+            mailimf_from *fromField = singleFields.fld_from;
+            Address *from = parseFrom(fromField);
+            m_header->setFrom(from);
+        }
+
+        // sender field
+        if (singleFields.fld_sender != NULL) {
+            mailimf_sender *senderField = singleFields.fld_sender;
+            m_header->setSender(parseSender(senderField->snd_mb));
+        }
+
+        // reply to field
+        if (singleFields.fld_reply_to != NULL) {
+            mailimf_reply_to *replyField = singleFields.fld_reply_to;
+            m_header->setReplyTo(parseAddressList(replyField->rt_addr_list));
+        }
+
+        // to field
+        if (singleFields.fld_to != NULL) {
+            mailimf_to *toField = singleFields.fld_to;
+            m_header->setTo(parseAddressList(toField->to_addr_list));
+        }
+
+        if (singleFields.fld_cc != NULL) {
+            mailimf_cc *ccField = singleFields.fld_cc;
+            m_header->setCc(parseAddressList(ccField->cc_addr_list));
+        }
+
+        if (singleFields.fld_bcc != NULL) {
+            mailimf_bcc *bccField = singleFields.fld_bcc;
+            m_header->setBcc(parseAddressList(bccField->bcc_addr_list));
+        }
+
+        if (singleFields.fld_message_id != NULL) {
+            mailimf_message_id *messageIdField = singleFields.fld_message_id;
+            m_header->setMessageId(mimeToUtf8(messageIdField->mid_value));
+        }
+
+        if (singleFields.fld_in_reply_to != NULL) {
+            mailimf_in_reply_to *inreplyToField = singleFields.fld_in_reply_to;
+        }
+
+        if (singleFields.fld_references != NULL) {
+            mailimf_references *referencesField = singleFields.fld_references;
+        }
+
+        if (singleFields.fld_subject != NULL) {
+            mailimf_subject *subjectField = singleFields.fld_subject;
+            m_header->setSubject(mimeToUtf8(subjectField->sbj_value));
+        }
+
+        if (singleFields.fld_comments != NULL) {
+            mailimf_comments *commentField = singleFields.fld_comments;
+        }
+
+        if (singleFields.fld_keywords != NULL) {
+            mailimf_keywords *keywordsField = singleFields.fld_keywords;
+        }
+    }
+}
+
+void Message::parseData()
 {
     struct mailmime *mime = NULL;
     size_t index = 0;
@@ -107,111 +106,111 @@ void Message::parseBody()
     int r = mailmime_parse(m_data.toStdString().c_str(), m_data.size(), &index, &mime);
 
     if (r != MAILIMF_NO_ERROR) {
-        qDebug() << "parse body error code" << r;
+        qDebug() << "parse message error code" << r;
         mailmime_free(mime);
         return;
     }
 
-    parseMime(mime, 0);
-    parseHtml();
-    parsePlainText();
+    parseMime(mime);
 
     mailmime_free(mime);
 }
 
-ssize_t Message::Uid() const
+Address *Message::parseFrom(mailimf_from *mbList)
 {
-    return m_Uid;
-}
-
-void Message::setUid(ssize_t newUid)
-{
-    m_Uid = newUid;
-}
-
-Contact *Message::parseFrom(mailimf_from *mbList)
-{
-    Contact *mailbox;
-    mailbox = parseMailBoxList(mbList->frm_mb_list).at(0);
+    Address *mailbox;
+    mailbox = parseMailBoxList(mbList->frm_mb_list)->at(0);
 
     return mailbox;
 }
 
-QList<Contact *> Message::parseTo(mailimf_to *mbList)
+Address *Message::parseSender(mailimf_mailbox *mb)
+{
+    Address *mailbox = new Address();
+
+    if (mb->mb_display_name != NULL) {
+        mailbox->setDisplayName(QString::fromStdString(mb->mb_display_name));
+    }
+    mailbox->setAddress(QString::fromStdString(mb->mb_addr_spec));
+
+    return mailbox;
+}
+
+QList<Address *> *Message::parseTo(mailimf_to *mbList)
 {
     return parseAddressList(mbList->to_addr_list);
 }
 
-QList<Contact *> Message::parseMailBoxList(mailimf_mailbox_list *mbList)
+QList<Address *> *Message::parseMailBoxList(mailimf_mailbox_list *mbList)
 {
     clistiter *cur;
-    QList<Contact *> contacts;
+    QList<Address *> *contacts = new QList<Address *>();
 
     for (cur = clist_begin(mbList->mb_list); cur != NULL; cur = clist_next(cur)) {
         struct mailimf_mailbox *mb;
-        mb = (mailimf_mailbox *) clist_content(cur);
-        Contact *contact = new Contact();
+        mb = (mailimf_mailbox *)clist_content(cur);
+        Address *address = new Address();
 
         if (mb->mb_display_name != NULL)
-            contact->setHostname(mimeToUtf8(mb->mb_display_name));
+            address->setDisplayName(mimeToUtf8(mb->mb_display_name));
 
-        contact->setAddress(mimeToUtf8(mb->mb_addr_spec));
+        address->setAddress(mimeToUtf8(mb->mb_addr_spec));
 
-        contacts.append(contact);
+        contacts->append(address);
     }
 
     return contacts;
 }
 
-QList<Contact *> Message::parseAddressList(mailimf_address_list *addressList)
+QList<Address *> *Message::parseAddressList(mailimf_address_list *addressList)
 {
     clistiter *cur;
-    QList<Contact *> addrList;
+    QList<Address *> *addrList = new QList<Address *>();
 
     for (cur = clist_begin(addressList->ad_list); cur != NULL; cur = clist_next(cur)) {
-        struct mailimf_address *addr = (mailimf_address *) clist_content(cur);
+        mailimf_address *addr = (mailimf_address *)clist_content(cur);
 
-        addrList = parseAddress(addr);
+        addrList->append(*parseAddress(addr));
     }
 
     return addrList;
 }
 
-QList<Contact *> Message::parseAddress(mailimf_address *addr)
+QList<Address *> *Message::parseAddress(mailimf_address *addr)
 {
-    QList<Contact *> contacts;
+    QList<Address *> *addresses = new QList<Address *>();
 
     switch (addr->ad_type) {
     case MAILIMF_ADDRESS_GROUP: {
         clistiter *it;
 
-        for (it = clist_begin(addr->ad_data.ad_group->grp_mb_list->mb_list); it != NULL;
-             it = clist_next(it)) {
+        for (it = clist_begin(addr->ad_data.ad_group->grp_mb_list->mb_list); it != NULL; it = clist_next(it)) {
             struct mailimf_mailbox *mb;
 
-            mb = (mailimf_mailbox *) clist_content(it);
-            Contact *contact = new Contact();
+            mb = (mailimf_mailbox *)clist_content(it);
+            Address *address = new Address();
             if (mb->mb_display_name != NULL) {
-                contact->setHostname(mimeToUtf8(mb->mb_display_name));
+                address->setDisplayName(mimeToUtf8(mb->mb_display_name));
             }
-            contact->setAddress(mimeToUtf8(mb->mb_addr_spec));
-            contacts.append(contact);
+            address->setAddress(mimeToUtf8(mb->mb_addr_spec));
+            addresses->append(address);
         }
     } break;
 
     case MAILIMF_ADDRESS_MAILBOX: {
         struct mailimf_mailbox *mb;
         mb = addr->ad_data.ad_mailbox;
-        Contact *contact = new Contact();
+        Address *address = new Address();
         if (mb->mb_display_name != NULL) {
-            contact->setHostname(mimeToUtf8(mb->mb_display_name));
+            address->setDisplayName(mimeToUtf8(mb->mb_display_name));
         }
-        contact->setAddress(mimeToUtf8(mb->mb_addr_spec));
-        contacts.append(contact);
+
+        address->setAddress(mimeToUtf8(mb->mb_addr_spec));
+        addresses->append(address);
     } break;
     }
 
-    return contacts;
+    return addresses;
 }
 
 QString Message::getMimeType(mailmime_content *content)
@@ -277,35 +276,29 @@ QString Message::getCompositeMimeType(mailmime_composite_type *type)
     }
 }
 
-void Message::parseMime(mailmime *mime, int depth)
+void Message::parseMime(mailmime *mime)
 {
-    mailmime_content *contentType = mime->mm_content_type;
-    mailmime_type *type = contentType->ct_type;
     QString mimeType = getMimeType(mime->mm_content_type);
 
     switch (mime->mm_type) {
     case MAILMIME_SINGLE:
         parseSingleMime(mime, mimeType);
         break;
+
     case MAILMIME_MULTIPLE:
-        for (clistiter *cur = clist_begin(mime->mm_data.mm_multipart.mm_mp_list); cur != NULL;
-             cur = clist_next(cur)) {
-            parseMime((mailmime *) clist_content(cur), depth + 1);
+        for (clistiter *cur = clist_begin(mime->mm_data.mm_multipart.mm_mp_list); cur != NULL; cur = clist_next(cur)) {
+            parseMime((mailmime *)clist_content(cur));
         }
         break;
     case MAILMIME_MESSAGE:
         if (mime->mm_data.mm_message.mm_fields) {
-            if (clist_begin(mime->mm_data.mm_message.mm_fields->fld_list) != NULL) {
-                //                printf("headers begin\n");
-
-                //                printf("headers end\n");
-            }
-
-            if (mime->mm_data.mm_message.mm_msg_mime != NULL) {
-                parseMime(mime->mm_data.mm_message.mm_msg_mime, depth + 1);
-            }
-            break;
+            parseHeaderFields(mime->mm_data.mm_message.mm_fields);
         }
+        if (mime->mm_data.mm_message.mm_msg_mime != NULL) {
+            parseMime(mime->mm_data.mm_message.mm_msg_mime);
+        }
+
+        break;
     }
 }
 
@@ -327,32 +320,26 @@ void Message::parseSingleMime(mailmime *mime, const QString &mimeType)
         size_t index = 0;
         char *parsedStr = NULL;
         size_t parsedLen = 0;
-        int rv = mailmime_part_parse(data->dt_data.dt_text.dt_data,
-                                     data->dt_data.dt_text.dt_length,
-                                     &index,
-                                     data->dt_encoding,
-                                     &parsedStr,
-                                     &parsedLen);
+        int rv = mailmime_part_parse(data->dt_data.dt_text.dt_data, data->dt_data.dt_text.dt_length, &index, data->dt_encoding, &parsedStr, &parsedLen);
 
         if (rv == MAILIMF_NO_ERROR) {
             MessagePart *bodypart = new MessagePart();
-            bodypart->m_Charset = charset;
-            bodypart->m_MimeType = mimeType;
-            bodypart->m_Size = std::string(parsedStr, parsedLen).size();
+            bodypart->setCharset(charset);
+            bodypart->setMimeType(mimeType);
+            bodypart->setSize(std::string(parsedStr, parsedLen).size());
 
             if (isAttachment) {
-                bodypart->m_IsAttachment = isAttachment;
-                bodypart->m_Payload = QByteArray(parsedStr, parsedLen);
-                bodypart->m_Filename = fileName;
+                bodypart->setIsAttachment(isAttachment);
+                bodypart->setPayload(QByteArray(parsedStr, parsedLen));
+                bodypart->setFilename(fileName);
             } else {
                 if (mimeType == "text/html") {
-                    bodypart->m_TextHtml = QString::fromStdString(parsedStr);
-
+                    bodypart->setTextHtml(QString::fromStdString(parsedStr));
                 } else if (mimeType == "text/plain") {
-                    bodypart->m_PlainText = QString::fromStdString(parsedStr);
+                    bodypart->setPlainText(QString::fromStdString(parsedStr));
                 }
             }
-            m_BodyParts.append(bodypart);
+            m_messageParts.append(bodypart);
         }
 
     } break;
@@ -365,10 +352,7 @@ void Message::parseSingleMime(mailmime *mime, const QString &mimeType)
     }
 }
 
-void Message::parseMimeFields(mailmime *mime,
-                              QString &filename,
-                              QString &charset,
-                              bool &isattachment)
+void Message::parseMimeFields(mailmime *mime, QString &filename, QString &charset, bool &isattachment)
 {
     mailmime_single_fields fields;
     memset(&fields, 0, sizeof(mailmime_single_fields));
@@ -376,7 +360,7 @@ void Message::parseMimeFields(mailmime *mime,
         mailmime_single_fields_init(&fields, mime->mm_mime_fields, mime->mm_content_type);
 
         if (fields.fld_disposition != NULL) {
-            struct mailmime_disposition_type *type = fields.fld_disposition->dsp_type;
+            mailmime_disposition_type *type = fields.fld_disposition->dsp_type;
             if (type != NULL) {
                 isattachment = (type->dsp_type == MAILMIME_DISPOSITION_TYPE_ATTACHMENT);
             }
@@ -394,41 +378,12 @@ void Message::parseMimeFields(mailmime *mime,
     }
 }
 
-void Message::parseHtml()
-{
-    QString html = "";
-    for (auto bodypart : qAsConst(m_BodyParts)) {
-        if (bodypart->m_TextHtml != "") {
-            html.append(bodypart->m_TextHtml);
-        }
-    }
-
-    m_Html = html;
-}
-
-void Message::parsePlainText()
-{
-    QString text = "";
-    for (auto bodypart : qAsConst(m_BodyParts)) {
-        if (bodypart->m_PlainText != "") {
-            text.append(bodypart->m_PlainText);
-        }
-    }
-
-    m_PlainText = text;
-}
-
 QString Message::mimeToUtf8(std::string str)
 {
     const char *charset = "UTF-8";
     char *cdecoded = NULL;
     size_t curtoken = 0;
-    int rv = mailmime_encoded_phrase_parse(charset,
-                                           str.c_str(),
-                                           str.size(),
-                                           &curtoken,
-                                           charset,
-                                           &cdecoded);
+    int rv = mailmime_encoded_phrase_parse(charset, str.c_str(), str.size(), &curtoken, charset, &cdecoded);
     if ((rv == MAILIMF_NO_ERROR) && (cdecoded != NULL)) {
         std::string decoded(cdecoded);
         free(cdecoded);
@@ -436,6 +391,45 @@ QString Message::mimeToUtf8(std::string str)
     } else {
         return QString::fromStdString(str);
     }
+}
+
+MessageHeader *Message::header() const
+{
+    return m_header;
+}
+
+const QList<MessagePart *> &Message::messageParts() const
+{
+    return m_messageParts;
+}
+
+void Message::setMessageParts(const QList<MessagePart *> &newMessageParts)
+{
+    m_messageParts = newMessageParts;
+}
+
+QString Message::html()
+{
+}
+
+const QString &Message::accountEmail() const
+{
+    return m_accountEmail;
+}
+
+void Message::setAccountEmail(const QString &newAccountEmail)
+{
+    m_accountEmail = newAccountEmail;
+}
+
+ssize_t Message::uid() const
+{
+    return m_uid;
+}
+
+void Message::setUid(ssize_t newUid)
+{
+    m_uid = newUid;
 }
 
 Flags *Message::flags() const
@@ -451,85 +445,4 @@ void Message::setFlags(Flags *newFlags)
 const QString &Message::Data() const
 {
     return m_data;
-}
-
-const QString &Message::PlainText() const
-{
-    return m_PlainText;
-}
-
-const QString &Message::Html() const
-{
-    return m_Html;
-}
-
-const QList<Contact *> &Message::ReplyTo() const
-{
-    return m_ReplyTo;
-}
-
-bool Message::hasAttachment()
-{
-    for (auto bodypart : m_BodyParts) {
-        if (bodypart->m_IsAttachment) {
-            return true;
-        }
-    }
-    return false;
-}
-
-int Message::attachmentCount()
-{
-    int count = 0;
-    for (auto bodypart : m_BodyParts) {
-        if (bodypart->m_IsAttachment) {
-            count++;
-        }
-    }
-    return count;
-}
-
-const QList<Contact *> &Message::Bcc() const
-{
-    return m_Bcc;
-}
-
-const QList<Contact *> &Message::cc() const
-{
-    return m_cc;
-}
-
-const QList<Contact *> &Message::To() const
-{
-    return m_To;
-}
-
-const QString &Message::MsgID() const
-{
-    return m_MsgID;
-}
-
-Contact *Message::From() const
-{
-    return m_from;
-}
-
-const QString &Message::Subject() const
-{
-    return m_Subject;
-}
-
-const QDateTime &Message::DateTime() const
-{
-    return m_DateTime;
-}
-
-const QString &Message::AccountEmail() const
-{
-    return m_AccountEmail;
-}
-
-void Message::setAccountEmail(const QString &newAccountEmail)
-{
-    m_AccountEmail = newAccountEmail;
 }

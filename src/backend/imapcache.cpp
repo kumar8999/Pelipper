@@ -10,8 +10,7 @@ ImapCache::ImapCache(const QString &email, QObject *parent)
     : m_Email(email)
     , QObject(parent)
 {
-    QString accountHash = QString(
-        QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
+    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
     m_CacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
     if (m_CacheFolderPath == "") {
@@ -23,9 +22,7 @@ ImapCache::ImapCache(const QString &email, QObject *parent)
     QDir dir;
     dir.mkpath(m_CacheFolderPath);
 
-    m_Settings = new QSettings(m_CacheFolderPath + "/" + accountHash + "_",
-                               QSettings::IniFormat,
-                               this);
+    m_Settings = new QSettings(m_CacheFolderPath + "/" + accountHash + "_", QSettings::IniFormat, this);
 }
 
 QList<Folder *> *ImapCache::getFolders()
@@ -100,8 +97,7 @@ QList<ssize_t> ImapCache::getUidList(const QString &foldername)
 
 QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
 {
-    QString accountHash = QString(
-        QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
+    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
     QString cachePath = QDir::homePath() + "/.config/Pelipper/" + accountHash;
     QDir dir(cachePath + "/MAILS");
 
@@ -130,7 +126,7 @@ QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
         }
 
         Message *msg = new Message(m_Email, fileinfo.fileName().toLong());
-        msg->setBodyData(data);
+        msg->parseFromData(data);
         msgList->append(msg);
     }
 
@@ -164,7 +160,7 @@ Message *ImapCache::getMessage(const QString &foldername, ssize_t uid, QString &
         data.append(line);
     }
 
-    msg->setBodyData(data);
+    msg->parseFromData(data);
 
     return msg;
 }
@@ -185,9 +181,9 @@ bool ImapCache::insertAllMessages(const QString &foldername, QList<Message *> *m
 
     for (int i = 0; i < msgList->length(); i++) {
         auto msg = msgList->at(i);
-        uidList.append(QString::number(msg->Uid()));
+        uidList.append(QString::number(msg->uid()));
 
-        QFile file(dir.path() + "/" + QString::number(msg->Uid()));
+        QFile file(dir.path() + "/" + QString::number(msg->uid()));
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
             return false;
 
@@ -213,7 +209,7 @@ bool ImapCache::insertMessage(const QString &foldername, Message *msg)
         }
     }
 
-    QFile file(dir.path() + "/" + QString::number(msg->Uid()));
+    QFile file(dir.path() + "/" + QString::number(msg->uid()));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
 
@@ -224,7 +220,7 @@ bool ImapCache::insertMessage(const QString &foldername, Message *msg)
 
     m_Settings->beginGroup("uids");
     uidList = m_Settings->value(foldername, QStringList()).toStringList();
-    uidList.append(QString::number(msg->Uid()));
+    uidList.append(QString::number(msg->uid()));
     m_Settings->setValue(foldername, uidList);
     m_Settings->endGroup();
 

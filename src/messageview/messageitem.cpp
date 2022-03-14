@@ -11,23 +11,23 @@ QString MessageItem::cc()
     if (m_Message == nullptr)
         return "";
 
-    QList<Contact *> contacts = m_Message->cc();
+    QList<Address *> *addresses = m_Message->header()->cc();
 
-    if (contacts.length() == 1) {
-        if (contacts.at(0)->Hostname() == "") {
-            return contacts.at(0)->Address();
+    if (addresses->length() == 1) {
+        if (addresses->at(0)->displayName() == "") {
+            return addresses->at(0)->address();
         } else {
-            return contacts.at(0)->Hostname() + "<" + contacts.at(0)->Address() + ">";
+            return addresses->at(0)->displayName() + "<" + addresses->at(0)->address() + ">";
         }
     }
 
     QString cc;
 
-    for (int i = 0; i < contacts.length(); i++) {
-        if (contacts.at(0)->Hostname() == "") {
-            cc += contacts.at(0)->Address() + ",";
+    for (int i = 0; i < addresses->length(); i++) {
+        if (addresses->at(0)->displayName() == "") {
+            cc += addresses->at(0)->address() + ",";
         } else {
-            cc += contacts.at(0)->Hostname() + "<" + contacts.at(0)->Address() + ">,";
+            cc += addresses->at(0)->displayName() + "<" + addresses->at(0)->address() + ">,";
         }
     }
 
@@ -39,23 +39,23 @@ QString MessageItem::bcc()
     if (m_Message == nullptr)
         return "";
 
-    QList<Contact *> contacts = m_Message->Bcc();
+    QList<Address *> *addresses = m_Message->header()->bcc();
 
-    if (contacts.length() == 1) {
-        if (contacts.at(0)->Hostname() == "") {
-            return contacts.at(0)->Address();
+    if (addresses->length() == 1) {
+        if (addresses->at(0)->displayName() == "") {
+            return addresses->at(0)->address();
         } else {
-            return contacts.at(0)->Hostname() + "<" + contacts.at(0)->Address() + ">";
+            return addresses->at(0)->displayName() + "<" + addresses->at(0)->address() + ">";
         }
     }
 
     QString bcc;
 
-    for (int i = 0; i < contacts.length(); i++) {
-        if (contacts.at(0)->Hostname() == "") {
-            bcc += contacts.at(0)->Address() + ",";
+    for (int i = 0; i < addresses->length(); i++) {
+        if (addresses->at(0)->displayName() == "") {
+            bcc += addresses->at(0)->address() + ",";
         } else {
-            bcc += contacts.at(0)->Hostname() + "<" + contacts.at(0)->Address() + ">,";
+            bcc += addresses->at(0)->displayName() + "<" + addresses->at(0)->address() + ">,";
         }
     }
 
@@ -67,12 +67,12 @@ QString MessageItem::from()
     if (m_Message == nullptr)
         return "";
 
-    Contact *contact = m_Message->From();
+    Address *address = m_Message->header()->from();
 
-    if (contact->Hostname() == "") {
-        return contact->Address();
+    if (address->displayName() == "") {
+        return address->address();
     } else {
-        return contact->Hostname() + "<" + contact->Address() + ">";
+        return address->displayName() + "<" + address->address() + ">";
     }
 }
 
@@ -81,23 +81,23 @@ QString MessageItem::to()
     if (m_Message == nullptr)
         return "";
 
-    QList<Contact *> contacts = m_Message->To();
+    QList<Address *> *address = m_Message->header()->to();
 
-    if (contacts.length() == 1) {
-        if (contacts.at(0)->Hostname() == "") {
-            return contacts.at(0)->Address();
+    if (address->length() == 1) {
+        if (address->at(0)->displayName() == "") {
+            return address->at(0)->address();
         } else {
-            return contacts.at(0)->Hostname() + "<" + contacts.at(0)->Address() + ">";
+            return address->at(0)->displayName() + "<" + address->at(0)->address() + ">";
         }
     }
 
     QString to;
 
-    for (int i = 0; i < contacts.length(); i++) {
-        if (contacts.at(0)->Hostname() == "") {
-            to += contacts.at(0)->Address() + ",";
+    for (int i = 0; i < address->length(); i++) {
+        if (address->at(0)->displayName() == "") {
+            to += address->at(0)->address() + ",";
         } else {
-            to += contacts.at(0)->Hostname() + "<" + contacts.at(0)->Address() + ">,";
+            to += address->at(0)->displayName() + "<" + address->at(0)->address() + ">,";
         }
     }
 
@@ -109,15 +109,7 @@ QString MessageItem::subject()
     if (m_Message == nullptr)
         return "";
 
-    return m_Message->Subject();
-}
-
-int MessageItem::uid()
-{
-    if (m_Message == nullptr)
-        return 0;
-
-    return m_Message->Uid();
+    return m_Message->header()->subject();
 }
 
 QString MessageItem::html()
@@ -125,10 +117,23 @@ QString MessageItem::html()
     if (m_Message == nullptr)
         return "";
 
-    if (m_Message->Html().isEmpty()) {
-        return m_Message->PlainText();
+    QList<MessagePart *> messageParts = m_Message->messageParts();
+
+    QString html = "";
+
+    for (auto messagePart : messageParts) {
+        html.append(messagePart->textHtml());
     }
-    return m_Message->Html();
+
+    if (!html.isEmpty()) {
+        return html;
+    }
+
+    for (auto messagePart : messageParts) {
+        html.append(messagePart->plainText());
+    }
+
+    return html;
 }
 
 QDateTime MessageItem::datetime()
@@ -136,7 +141,7 @@ QDateTime MessageItem::datetime()
     if (m_Message == nullptr)
         return QDateTime();
 
-    return m_Message->DateTime();
+    return m_Message->header()->dateTime();
 }
 
 bool MessageItem::hasAttachments()
@@ -144,7 +149,14 @@ bool MessageItem::hasAttachments()
     if (m_Message == nullptr)
         return false;
 
-    return m_Message->hasAttachment();
+    QList<MessagePart *> messageParts = m_Message->messageParts();
+
+    for (auto messagePart : messageParts) {
+        if (messagePart->isAttachment()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void MessageItem::setMessage(Message *newMessage)

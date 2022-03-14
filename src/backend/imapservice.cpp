@@ -291,7 +291,7 @@ QList<Message *> *ImapService::getAllHeaders(const QString &foldername)
         }
 
         Message *msg = new Message(m_email, uid);
-        msg->setHeaderData(data);
+        msg->parseFromData(data);
         msg->setFlags(flags);
         msgList->append(msg);
     }
@@ -370,7 +370,7 @@ Message *ImapService::getBody(ssize_t uid)
 
     Message *msg = new Message(m_email, uid);
     msg->setFlags(flags);
-    msg->setBodyData(data);
+    msg->parseFromData(data);
 
     m_imapCache->insertMessage(m_selectedFolder, msg);
 
@@ -476,7 +476,7 @@ QList<Message *> *ImapService::getAllMessage(const QString &foldername)
 
         Message *msg = new Message(m_email, uid);
         msg->setFlags(flags);
-        msg->setBodyData(data);
+        msg->parseFromData(data);
         msgList->append(msg);
     }
 
