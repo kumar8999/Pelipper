@@ -5,6 +5,7 @@ import org.kde.kirigami 2.17 as Kirigami
 
 ListView {
     property int mulBegin: 0
+    property string selectedAccount: ""
 
     id: messageListView
     model: session.messageListModel
@@ -12,25 +13,6 @@ ListView {
     headerPositioning: ListView.OverlayHeader
     highlightRangeMode: ListView.StrictlyEnforceRange
     ScrollBar.vertical: ScrollBar {}
-
-    section.property: "size"
-    section.criteria: ViewSection.FullString
-    section.delegate: sectionHeading
-
-    Component {
-        id: sectionHeading
-        Rectangle {
-            width: container.width
-            height: childrenRect.height
-            color: "lightsteelblue"
-
-            Text {
-                text: "section"
-                font.bold: true
-                font.pixelSize: 20
-            }
-        }
-    }
 
     header: TextField {
         z: 3
@@ -62,21 +44,17 @@ ListView {
         seenflag: model.Seen
         recentflag: model.Recent
 
-        onDoubleClicked: {
-            messageListView.currentIndex = index
-            session.messageListModel.setSeenFlag(index)
-            session.selectedMessage(model.Email, model.Uid)
-        }
+        onItemClicked: {
+            var i
 
-        onClicked: {
             if (mouse.modifiers & Qt.ControlModifier) {
                 messageListView.model.toggleSelected(model.index)
                 messageListView.mulBegin = index
             } else if (mouse.modifiers & Qt.ShiftModifier) {
-                var i
                 if (index > messageListView.mulBegin) {
                     for (i = messageListView.mulBegin; i <= index; i++) {
                         messageListView.model.setSelected(i)
+
                     }
                 } else {
                     for (i = index; i <= messageListView.mulBegin; i++) {
@@ -88,18 +66,20 @@ ListView {
                 messageListView.model.toggleSelected(model.index)
                 if (model.Selected)
                     messageListView.mulBegin = index
+
+                session.messageListModel.setSeenFlag(index)
+                session.selectedMessage(model.Email, model.Uid)
             }
 
-            //            var emailList = control.model.selectedMessageAccounts()
+            var selectedIndexes = messageListView.model.selectedIndexes()
 
-            //            if (emailList.length === 1) {
-            //                moveMenu.enabled = true
-            //                session.folderListModel.loadFolderList(emailList[0])
-            //            } else {
-            //                moveMenu.enabled = false
-            //            }
+            for ( i = 0; i < selectedIndexes.length(); i++) {
+                var selectedIndex = selectedIndexes[i]
+                console.log(selectedIndex)
+            }
         }
     }
+
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.RightButton

@@ -31,7 +31,6 @@ void Message::parseHeaderFields(mailimf_fields *headerFields)
             QDate date = QDate(datetime->dt_year, datetime->dt_month, datetime->dt_day);
             QTime time = QTime(datetime->dt_hour, datetime->dt_min, datetime->dt_sec);
 
-            qDebug() << "date time" << QDateTime(date, time);
             m_header->setDateTime(QDateTime(date, time));
         }
 

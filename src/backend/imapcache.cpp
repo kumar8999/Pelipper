@@ -98,10 +98,11 @@ QList<ssize_t> ImapCache::getUidList(const QString &foldername)
 QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
 {
     QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
-    QString cachePath = QDir::homePath() + "/.config/Pelipper/" + accountHash;
+    QString cachePath = QDir::homePath() + "/.cache/Pelipper/" + accountHash;
     QDir dir(cachePath + "/MAILS");
 
     if (!dir.exists()) {
+        qDebug() << " dir not exists";
         return nullptr;
     }
 
@@ -109,14 +110,17 @@ QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
     QStringList uids = m_Settings->value(foldername, QStringList()).toStringList();
     m_Settings->endGroup();
 
+    return nullptr;
     QList<Message *> *msgList = new QList<Message *>();
 
     QFileInfoList filenameList = dir.entryInfoList(uids);
 
     for (const auto &fileinfo : qAsConst(filenameList)) {
         QFile file(fileinfo.absoluteFilePath());
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            delete msgList;
             return nullptr;
+        }
 
         QTextStream in(&file);
         QString data;

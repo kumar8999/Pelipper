@@ -25,7 +25,8 @@ Kirigami.ApplicationWindow {
             Action {
                 text: qsTr("Compose")
                 onTriggered: {
-                    composerWidget.show()
+                    applicationWindow().pageStack.layers.push(
+                                "qrc:/qml/ComposerWidget.qml")
                 }
             }
 
@@ -100,9 +101,5 @@ Kirigami.ApplicationWindow {
 
     AddAccount {
         id: addAccount
-    }
-
-    ComposerWidget {
-        id: composerWidget
     }
 }

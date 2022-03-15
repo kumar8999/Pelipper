@@ -32,7 +32,11 @@ public slots:
 
     void selectAll();
 
+    QModelIndexList selectedIndexes();
+
     void setSeenFlag(int indexValue);
+
+    void deleteMessages();
 
 signals:
     void loadingChanged();

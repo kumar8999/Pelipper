@@ -114,6 +114,11 @@ void SortModel::selectAll()
     emit selectedItemChanged();
 }
 
+QModelIndexList SortModel::selectedIndexes()
+{
+    return m_selectionModel->selectedIndexes();
+}
+
 void SortModel::setSeenFlag(int indexValue)
 {
     if (indexValue < 0)
@@ -125,6 +130,22 @@ void SortModel::setSeenFlag(int indexValue)
     _model->setSeenFlag(sourceIndex.row());
 
     emit dataChanged(index, index);
+}
+
+void SortModel::deleteMessages()
+{
+    if (m_selectionModel->hasSelection()) {
+        QModelIndexList indexList;
+        QModelIndexList selectedIndexes = m_selectionModel->selectedIndexes();
+
+        auto _model = static_cast<MessageListModel *>(sourceModel());
+
+        for (auto selectedIndex : selectedIndexes) {
+            indexList.append(mapToSource(selectedIndex));
+        }
+
+        _model->deleteMessages(indexList);
+    }
 }
 
 void SortModel::setModel(QAbstractListModel *model)

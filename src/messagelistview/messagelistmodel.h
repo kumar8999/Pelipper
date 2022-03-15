@@ -32,6 +32,10 @@ public:
 
     void setLoading(bool newLoading);
 
+    void deleteMessages(QModelIndexList indexList);
+
+    void moveMessages(QModelIndexList indexList);
+
 public slots:
     void onFolderSelected(QHash<Account *, Folder *> *accountFolder);
 
@@ -50,8 +54,13 @@ private:
 
     void loadMessage(QHash<Account *, Folder *> *accountFolder);
 
+    void _deleteMessages(QModelIndexList indexList);
+
+    void _moveMessages(QModelIndexList indexList);
+
 private:
     QList<Message *> *m_messageList;
+    QMap<ssize_t, QString> folders;
 
     bool m_loading;
 

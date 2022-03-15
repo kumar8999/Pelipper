@@ -7,61 +7,34 @@ ColumnLayout {
     property var addressLists: []
     property bool showAddressListsView: false
     property bool isToField: false
-
-    Flow {
-        Repeater {
-            model: addressModel
-
-            Rectangle {
-                color: Kirigami.Theme.highlightColor
-                radius: 50
-                width: t_metrics.tightBoundingRect.width + 25
-                height: t_metrics.tightBoundingRect.height + 5
-
-                Row {
-                    Text {
-                        id: a_text
-                        text: model.email
-                        anchors.leftMargin: 5
-                    }
-
-                    TextMetrics {
-                        id: t_metrics
-                        font: a_text.font
-                        text: a_text.text
-                    }
-
-                    Controls.ToolButton {
-                        icon.name: qsTr("close-symbolic")
-                    }
-                }
-            }
-        }
-    }
+    property string fieldLabel: ""
 
     ListModel {
         id: addressModel
     }
 
     RowLayout {
+        Layout.fillWidth: true
+        height: parent.height
+
+        Controls.Label {
+            text: qsTr(fieldLabel)
+        }
+
         Controls.TextField {
             id: addressField
-            Layout.fillWidth: true
+            height: parent.height
 
-            onTextEdited: {
-                if (addressField.text.charAt(
-                            addressField.text.length - 1) === " ") {
-                    if (validateEmail(addressField.text.trim())) {
-                        addressModel.append({
-                                                "email": addressField.text.trim(
-                                                             )
-                                            })
-                        addressField.text = ""
-                    } else {
-                        inlineMessage.setText("Enter Valid Email")
-                        addressField.activeFocus()
-                        addressField.text = addressField.text.trim()
-                    }
+            onEditingFinished: {
+                if (validateEmail(addressField.text.trim())) {
+                    addressModel.append({
+                                            "email": addressField.text.trim()
+                                        })
+                    addressField.text = ""
+                } else {
+                    inlineMessage.setText("Enter Valid Email")
+                    addressField.activeFocus()
+                    addressField.text = addressField.text.trim()
                 }
 
                 if (addressModel.count > 0) {
@@ -72,17 +45,36 @@ ColumnLayout {
             }
         }
 
-        Controls.ToolButton {
-            id: showCcField
-            visible: isToField
-            text: qsTr("cc")
-            onClicked: {
-                if (composer.showCc) {
-                    composer.showCc = false
-                } else {
-                    composer.showCc = true
+        ListView {
+            id: showAddressListsView
+            Layout.fillWidth: true
+            height: parent.height
+            orientation: ListView.Horizontal
+            Controls.ScrollBar.horizontal: Controls.ScrollBar {}
+
+            model: addressModel
+            delegate: Kirigami.BasicListItem {
+                width: 200
+                text: qsTr(model.email)
+                trailing: Controls.ToolButton {
+                    text: qsTr("x")
                 }
             }
         }
+    }
+
+    Component.onCompleted: {
+        addressModel.append({
+                                "email": "kumar@gmail.com"
+                            })
+        addressModel.append({
+                                "email": "kumar@gmail.com"
+                            })
+    }
+
+    function validateEmail(email) {
+        let regex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        let matches = email.toLowerCase().match(regex)
+        return matches && matches.length > 0
     }
 }

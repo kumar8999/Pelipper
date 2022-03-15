@@ -1,5 +1,7 @@
 #include "messagelistmodel.h"
 
+#include "../backend/session.h"
+
 #include <QtConcurrent>
 
 MessageListModel::MessageListModel(QObject *parent)
@@ -33,8 +35,6 @@ QVariant MessageListModel::data(const QModelIndex &index, int role) const
     if (header == nullptr) {
         return QVariant();
     }
-
-    qDebug() << header->dateTime();
 
     switch (role) {
     case Roles::SenderRole: {
@@ -157,7 +157,86 @@ void MessageListModel::loadMessage(QHash<Account *, Folder *> *accountFolder)
             continue;
         }
 
+        for (int i = 0; i < msgList->length(); i++) {
+            Message *msg = msgList->at(i);
+            folders.insert(msg->uid(), folder->FullName());
+        }
+
         emit messageReadReady(msgList);
+    }
+}
+
+void MessageListModel::_deleteMessages(QModelIndexList indexList)
+{
+    auto *deleteUids = new QMap<QString, QList<ssize_t>>();
+
+    for (auto index : indexList) {
+        Message *message = m_messageList->at(index.row());
+        ssize_t uid = message->uid();
+        QString accountEmail = message->accountEmail();
+        QString folderName = folders[uid];
+
+        if (deleteUids->contains(folderName + " - " + accountEmail)) {
+            deleteUids->insert(folderName + " - " + accountEmail, QList<ssize_t>());
+        }
+
+        QList<ssize_t> uidList = deleteUids->value(folderName);
+        uidList.append(uid);
+        deleteUids->insert(folderName + " - " + accountEmail, uidList);
+    }
+
+    QMapIterator<QString, QList<ssize_t>> deleteUidIter(*deleteUids);
+    while (deleteUidIter.hasNext()) {
+        deleteUidIter.next();
+        qDebug() << deleteUidIter.key();
+        QList<QString> splits = deleteUidIter.key().split(" - ");
+
+        QString folderName = splits.at(0);
+        QString accountEmail = splits.at(1);
+
+        qDebug() << accountEmail << "delete" << folderName;
+        QList<ssize_t> uidList = deleteUids->value(folderName);
+
+        Account *account = Session::getInstance()->getAccount(accountEmail);
+        ImapService *imapService = account->IMAPService();
+        imapService->deleteMessage(folderName, uidList);
+    }
+}
+
+void MessageListModel::_moveMessages(QModelIndexList indexList)
+{
+    auto *moveUids = new QMap<QString, QList<ssize_t>>();
+
+    for (auto index : indexList) {
+        Message *message = m_messageList->at(index.row());
+        ssize_t uid = message->uid();
+        QString accountEmail = message->accountEmail();
+        QString folderName = folders[uid];
+
+        if (moveUids->contains(folderName + " - " + accountEmail)) {
+            moveUids->insert(folderName + " - " + accountEmail, QList<ssize_t>());
+        }
+
+        QList<ssize_t> uidList = moveUids->value(folderName);
+        uidList.append(uid);
+        moveUids->insert(folderName + " - " + accountEmail, uidList);
+    }
+
+    QMapIterator<QString, QList<ssize_t>> moveUidIter(*moveUids);
+    while (moveUidIter.hasNext()) {
+        moveUidIter.next();
+        qDebug() << moveUidIter.key();
+        QList<QString> splits = moveUidIter.key().split(" - ");
+
+        QString folderName = splits.at(0);
+        QString accountEmail = splits.at(1);
+
+        qDebug() << accountEmail << "delete" << folderName;
+        QList<ssize_t> uidList = moveUids->value(folderName);
+
+        Account *account = Session::getInstance()->getAccount(accountEmail);
+        ImapService *imapService = account->IMAPService();
+        //        imapService->moveMessage(folderName, uidList);
     }
 }
 
@@ -172,4 +251,14 @@ void MessageListModel::setLoading(bool newLoading)
         return;
     m_loading = newLoading;
     emit loadingChanged();
+}
+
+void MessageListModel::deleteMessages(QModelIndexList indexList)
+{
+    QtConcurrent::run(this, &MessageListModel::_deleteMessages, indexList);
+}
+
+void MessageListModel::moveMessages(QModelIndexList indexList)
+{
+    QtConcurrent::run(this, &MessageListModel::_moveMessages, indexList);
 }
