@@ -12,6 +12,7 @@ Kirigami.BasicListItem {
     property bool highlightItem
     property bool seenflag
     property bool recentflag
+    property string email
 
     signal itemClicked(var mouse)
 

@@ -34,6 +34,21 @@ void FolderListModel::selectFolder(QModelIndex index)
     }
 }
 
+void FolderListModel::loadFolderList(const QString &accountEmail)
+{
+    qDebug() << "here " << accountEmail;
+    if (accountEmail != "") {
+        for (int i = 0; i < rowCount(); i++) {
+            AccountItem *accountItem = static_cast<AccountItem *>(itemFromIndex(this->index(i, 0)));
+            qDebug() << accountItem->email();
+            if (accountItem->email() == accountEmail) {
+                qDebug() << accountItem->folderList();
+                setFolderList(accountItem->folderList());
+            }
+        }
+    }
+}
+
 void FolderListModel::addAccount(Account *account)
 {
     setLoading(true);
@@ -78,6 +93,14 @@ void FolderListModel::onFoldersLoadFinished()
     //    emit folderSelected(accountFolder);
 }
 
+void FolderListModel::setFolderList(const QStringList &newFolderList)
+{
+    if (m_folderList == newFolderList)
+        return;
+    m_folderList = newFolderList;
+    emit folderListChanged();
+}
+
 bool FolderListModel::loading() const
 {
     return m_loading;
@@ -89,4 +112,9 @@ void FolderListModel::setLoading(bool newLoading)
         return;
     m_loading = newLoading;
     emit loadingChanged();
+}
+
+const QStringList &FolderListModel::folderList() const
+{
+    return m_folderList;
 }

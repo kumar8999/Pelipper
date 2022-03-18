@@ -39,7 +39,7 @@ void Flags::setAnsweredFlag(bool newAnsweredFlag)
     m_answeredFlag = newAnsweredFlag;
 }
 
-bool Flags::raftFlag() const
+bool Flags::draftFlag() const
 {
     return m_draftFlag;
 }

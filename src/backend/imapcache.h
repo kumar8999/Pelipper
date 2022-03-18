@@ -24,9 +24,13 @@ public:
 
     Message *getMessage(const QString &foldername, ssize_t uid, QString &data);
 
+    Flags *getFlags(const ssize_t &uid);
+
     bool insertAllMessages(const QString &foldername, QList<Message *> *msgList);
 
     bool insertMessage(const QString &foldername, Message *msg);
+
+    bool saveFlags(const ssize_t &uid, Flags *flags);
 
     bool deleteMessage(const QString &foldername, QList<ssize_t> uidList);
 

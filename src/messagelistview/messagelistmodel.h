@@ -34,7 +34,7 @@ public:
 
     void deleteMessages(QModelIndexList indexList);
 
-    void moveMessages(QModelIndexList indexList);
+    void moveMessages(QModelIndexList indexList, const QString &destDir);
 
 public slots:
     void onFolderSelected(QHash<Account *, Folder *> *accountFolder);
@@ -46,8 +46,12 @@ signals:
 
     void messageReadReady(QList<Message *> *msgList);
 
+    void deleteMessage(QModelIndexList indexList);
+
 private slots:
     void onMessageReadyFinished(QList<Message *> *msgList);
+
+    void onDeleteMessage(QModelIndexList indexList);
 
 private:
     QString parseDate(const QDateTime &datetime) const;
@@ -56,7 +60,7 @@ private:
 
     void _deleteMessages(QModelIndexList indexList);
 
-    void _moveMessages(QModelIndexList indexList);
+    void _moveMessages(QModelIndexList indexList, const QString &destDir);
 
 private:
     QList<Message *> *m_messageList;

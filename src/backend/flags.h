@@ -18,7 +18,7 @@ public:
     bool answeredFlag() const;
     void setAnsweredFlag(bool newAnsweredFlag);
 
-    bool raftFlag() const;
+    bool draftFlag() const;
     void setDraftFlag(bool newDraftFlag);
 
     bool recentFlag() const;

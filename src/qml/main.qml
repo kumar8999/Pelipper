@@ -18,7 +18,8 @@ Kirigami.ApplicationWindow {
             Action {
                 text: qsTr("Add Account")
                 onTriggered: {
-                    addAccount.open()
+                    applicationWindow().pageStack.layers.push(
+                                "qrc:/qml/AddAccount.qml")
                 }
             }
 
@@ -97,9 +98,5 @@ Kirigami.ApplicationWindow {
                 anchors.centerIn: parent
             }
         }
-    }
-
-    AddAccount {
-        id: addAccount
     }
 }

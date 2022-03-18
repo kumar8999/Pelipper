@@ -65,7 +65,7 @@ bool ImapService::selectFolder(const QString &folderName)
     return r == MAILIMAP_NO_ERROR;
 }
 
-QList<Folder *> *ImapService::getFolders(const QString &folderName)
+QList<Folder *> *ImapService::getFolders(QStringList &folderListstr)
 {
     QMutexLocker locker(&m_mutex);
 
@@ -89,13 +89,9 @@ QList<Folder *> *ImapService::getFolders(const QString &folderName)
     for (clistiter *it = clist_begin(list); it != NULL; it = it->next) {
         mailimap_mailbox_list *mblist = (mailimap_mailbox_list *)clist_content(it);
         if (mblist) {
-            qDebug() << mblist->mb_name;
             const std::string &foldername = std::string(mblist->mb_name);
             folderMap[QString::fromStdString(foldername)] = mblist;
-
-            //            mailimap_mbx_list_flags *bflags = mblist->mb_flag;
-            //            if (bflags) {
-            //            }
+            folderListstr.append(QString::fromStdString(foldername));
         }
     }
 
@@ -134,7 +130,8 @@ QList<Folder *> *ImapService::getFolders(const QString &folderName)
 Folder *ImapService::getFolder(const QString &foldername)
 {
     if (!m_folders.contains(foldername)) {
-        getFolders();
+        QStringList temp;
+        getFolders(temp);
     }
 
     return m_folders.value(foldername);
@@ -422,6 +419,7 @@ QList<Message *> *ImapService::getAllMessage(const QString &foldername)
     mailimap_fetch_type_new_fetch_att_list_add(fetchType, fetchAtt);
 
     if (!nonCachedUids.isEmpty()) {
+        qDebug() << "not empty";
         set = mailimap_set_new_empty();
 
         for (auto uid : qAsConst(nonCachedUids)) {
@@ -502,6 +500,9 @@ bool ImapService::deleteMessage(const QString &foldername, QList<ssize_t> uidLis
 {
     QMutexLocker locker(&m_mutex);
 
+    if (uidList.isEmpty())
+        return false;
+
     if (!selectFolder(foldername)) {
         qDebug() << "could not select";
         return false;
@@ -509,30 +510,25 @@ bool ImapService::deleteMessage(const QString &foldername, QList<ssize_t> uidLis
 
     mailimap_flag_list *flaglist = mailimap_flag_list_new_empty();
     mailimap_flag_list_add(flaglist, mailimap_flag_new_deleted());
+    mailimap_store_att_flags *storeflags = mailimap_store_att_flags_new_add_flags(flaglist);
 
-    mailimap_set *set = mailimap_set_new_interval(0, 1);
+    mailimap_set *set = mailimap_set_new_empty();
     for (auto &uid : uidList) {
-        qDebug() << "delete" << uid;
         mailimap_set_add_single(set, uid);
     }
 
-    mailimap_store_att_flags *storeflags = mailimap_store_att_flags_new_add_flags(flaglist);
-
     int r = mailimap_uid_store(m_imap, set, storeflags);
-
     mailimap_set_free(set);
-
-    if (storeflags != NULL) {
-        mailimap_store_att_flags_free(storeflags);
-    }
+    mailimap_store_att_flags_free(storeflags);
 
     if (r != MAILIMAP_NO_ERROR) {
         qDebug() << "could not delete" << r;
         return false;
     }
 
+    m_imapCache->deleteMessage(foldername, uidList);
+
     //    r = mailimap_expunge(m_imap);
-    qDebug() << "expungge" << r;
     return r == MAILIMAP_NO_ERROR;
 }
 
@@ -540,11 +536,15 @@ bool ImapService::moveMessage(const QString &souceFolderName, const QString &des
 {
     QMutexLocker locker(&m_mutex);
 
+    if (uidList.isEmpty()) {
+        return false;
+    }
+
     if (!selectFolder(souceFolderName)) {
         return false;
     }
 
-    mailimap_set *set = mailimap_set_new_interval(0, 1);
+    mailimap_set *set = mailimap_set_new_empty();
     for (auto &uid : uidList) {
         mailimap_set_add_single(set, uid);
     }

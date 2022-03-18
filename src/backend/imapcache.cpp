@@ -4,6 +4,8 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QStandardPaths>
 
 ImapCache::ImapCache(const QString &email, QObject *parent)
@@ -110,7 +112,6 @@ QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
     QStringList uids = m_Settings->value(foldername, QStringList()).toStringList();
     m_Settings->endGroup();
 
-    return nullptr;
     QList<Message *> *msgList = new QList<Message *>();
 
     QFileInfoList filenameList = dir.entryInfoList(uids);
@@ -131,6 +132,7 @@ QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
 
         Message *msg = new Message(m_Email, fileinfo.fileName().toLong());
         msg->parseFromData(data);
+        msg->setFlags(getFlags(fileinfo.fileName().toLong()));
         msgList->append(msg);
     }
 
@@ -166,7 +168,33 @@ Message *ImapCache::getMessage(const QString &foldername, ssize_t uid, QString &
 
     msg->parseFromData(data);
 
+    Flags *flag = getFlags(uid);
+    msg->setFlags(flag);
+
     return msg;
+}
+
+Flags *ImapCache::getFlags(const ssize_t &uid)
+{
+    QFile file(m_CacheFolderPath + "/flags");
+
+    if (!file.open(QIODevice::ReadWrite)) {
+        qWarning("Couldn't open save file.");
+        return nullptr;
+    }
+
+    Flags *flag = new Flags();
+
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    QJsonObject flagObj = mainObj[QString::number(uid)].toObject();
+
+    flag->setSeenFlag(flagObj["seen"].toBool());
+    flag->setDeletedFlag(flagObj["deleted"].toBool());
+    flag->setAnsweredFlag(flagObj["answered"].toBool());
+    flag->setDraftFlag(flagObj["draft"].toBool());
+    flag->setRecentFlag(flagObj["recent"].toBool());
+
+    return flag;
 }
 
 bool ImapCache::insertAllMessages(const QString &foldername, QList<Message *> *msgList)
@@ -193,6 +221,8 @@ bool ImapCache::insertAllMessages(const QString &foldername, QList<Message *> *m
 
         QTextStream out(&file);
         out << msg->Data();
+
+        saveFlags(msg->uid(), msg->flags());
     }
 
     m_Settings->beginGroup("uids");
@@ -229,6 +259,29 @@ bool ImapCache::insertMessage(const QString &foldername, Message *msg)
     m_Settings->endGroup();
 
     return true;
+}
+
+bool ImapCache::saveFlags(const ssize_t &uid, Flags *flags)
+{
+    QFile file(m_CacheFolderPath + "/flags");
+
+    if (!file.open(QIODevice::ReadWrite)) {
+        qWarning("Couldn't open save file.");
+        return false;
+    }
+
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    QJsonObject flagObj = mainObj[QString::number(uid)].toObject();
+
+    flagObj.insert("seen", flags->seenFlag());
+    flagObj.insert("deleted", flags->deletedFlag());
+    flagObj.insert("answered", flags->answeredFlag());
+    flagObj.insert("draft", flags->draftFlag());
+    flagObj.insert("recent", flags->recentFlag());
+
+    mainObj.insert(QString::number(uid), flagObj);
+
+    return file.write(QJsonDocument(mainObj).toJson());
 }
 
 bool ImapCache::deleteMessage(const QString &foldername, QList<ssize_t> uidList)

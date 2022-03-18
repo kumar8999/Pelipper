@@ -13,6 +13,7 @@ class FolderListModel : public QStandardItemModel
     Q_OBJECT
 
     Q_PROPERTY(bool loading READ loading WRITE setLoading NOTIFY loadingChanged)
+    Q_PROPERTY(QStringList folderList READ folderList WRITE setFolderList NOTIFY folderListChanged)
 
 public:
     FolderListModel(QObject *parent = nullptr);
@@ -21,13 +22,20 @@ public:
 
     void setLoading(bool newLoading);
 
+    void setFolderList(const QStringList &newFolderList);
+
+    const QStringList &folderList() const;
+
 public slots:
     void selectFolder(QModelIndex index);
 
+    void loadFolderList(const QString &accountEmail = "");
 signals:
     void loadingChanged();
 
     void folderSelected(QHash<Account *, Folder *> *accountFolders);
+
+    void folderListChanged();
 
 private slots:
     void addAccount(Account *account);
@@ -38,6 +46,8 @@ private:
     bool m_loading;
     Settings *m_settings;
     QFuture<void> m_selectFolderThread;
+
+    QStringList m_folderList;
 };
 
 #endif // FOLDERLISTMODEL_H

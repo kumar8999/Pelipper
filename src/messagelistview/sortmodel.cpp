@@ -114,9 +114,20 @@ void SortModel::selectAll()
     emit selectedItemChanged();
 }
 
-QModelIndexList SortModel::selectedIndexes()
+bool SortModel::isSelected(int indexValue)
+{
+    QModelIndex index = this->index(indexValue, 0);
+    return m_selectionModel->isSelected(index);
+}
+
+QList<QModelIndex> SortModel::selectedIndexes()
 {
     return m_selectionModel->selectedIndexes();
+}
+
+int SortModel::selectedItemLength()
+{
+    return m_selectionModel->selectedIndexes().length();
 }
 
 void SortModel::setSeenFlag(int indexValue)
@@ -145,6 +156,22 @@ void SortModel::deleteMessages()
         }
 
         _model->deleteMessages(indexList);
+    }
+}
+
+void SortModel::moveMessages(const QString &destFolderName)
+{
+    if (m_selectionModel->hasSelection()) {
+        QModelIndexList indexList;
+        QModelIndexList selectedIndexes = m_selectionModel->selectedIndexes();
+
+        auto _model = static_cast<MessageListModel *>(sourceModel());
+
+        for (auto selectedIndex : selectedIndexes) {
+            indexList.append(mapToSource(selectedIndex));
+        }
+
+        _model->moveMessages(indexList, destFolderName);
     }
 }
 

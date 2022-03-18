@@ -6,6 +6,9 @@ import org.kde.kirigami 2.17 as Kirigami
 ListView {
     property int mulBegin: 0
     property string selectedAccount: ""
+    property var accountObj: {
+
+    }
 
     id: messageListView
     model: session.messageListModel
@@ -43,6 +46,7 @@ ListView {
         subject: model.Subject
         seenflag: model.Seen
         recentflag: model.Recent
+        email: model.Email
 
         onItemClicked: {
             var i
@@ -50,32 +54,47 @@ ListView {
             if (mouse.modifiers & Qt.ControlModifier) {
                 messageListView.model.toggleSelected(model.index)
                 messageListView.mulBegin = index
+
+                let len = accountObj[model.Email]
+
+                if (messageListView.model.isSelected(model.index)) {
+                    len = len + 1
+                } else {
+                    len = len - 1
+                }
+                accountObj[model.Email] = len
+
+                if (len === 0) {
+                    delete accountObj[model.Email]
+                }
             } else if (mouse.modifiers & Qt.ShiftModifier) {
+                let len = accountObj[model.Email]
+
                 if (index > messageListView.mulBegin) {
                     for (i = messageListView.mulBegin; i <= index; i++) {
                         messageListView.model.setSelected(i)
-
+                        len = len + 1
                     }
                 } else {
                     for (i = index; i <= messageListView.mulBegin; i++) {
                         messageListView.model.setSelected(i)
+                        len = len + 1
                     }
                 }
+                accountObj[model.Email] = len
             } else {
                 messageListView.model.clearSelections()
                 messageListView.model.toggleSelected(model.index)
-                if (model.Selected)
+
+                accountObj = {}
+
+                if (model.Selected) {
                     messageListView.mulBegin = index
+                    accountObj[model.Email] = 1
+                }
 
                 session.messageListModel.setSeenFlag(index)
                 session.selectedMessage(model.Email, model.Uid)
-            }
-
-            var selectedIndexes = messageListView.model.selectedIndexes()
-
-            for ( i = 0; i < selectedIndexes.length(); i++) {
-                var selectedIndex = selectedIndexes[i]
-                console.log(selectedIndex)
             }
         }
     }
@@ -105,7 +124,15 @@ ListView {
                 id: moveMenu
                 text: "Move"
 
+                //                enabled: Object.keys(accountObj).length === 1
                 onTriggered: {
+
+                    for (let key in accountObj) {
+                        console.log(key)
+                        selectedAccount = key
+                    }
+
+                    folderListModal.accountName = selectedAccount
                     folderListModal.open()
                 }
             }
@@ -141,6 +168,12 @@ ListView {
             return datetime.toLocaleDateString(Qt.locale(), "ddd")
         } else {
             return datetime.toLocaleDateString(Qt.locale(), "MMM d")
+        }
+    }
+
+    Component.onCompleted: {
+        for (var i = 0; i < session.accountEmail(); i++) {
+            accountObj[session.accountEmail()[i]] = 0
         }
     }
 }

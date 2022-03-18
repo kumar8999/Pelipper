@@ -32,11 +32,17 @@ public slots:
 
     void selectAll();
 
-    QModelIndexList selectedIndexes();
+    bool isSelected(int index);
+
+    QList<QModelIndex> selectedIndexes();
+
+    int selectedItemLength();
 
     void setSeenFlag(int indexValue);
 
     void deleteMessages();
+
+    void moveMessages(const QString &destFolderName);
 
 signals:
     void loadingChanged();

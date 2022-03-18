@@ -6,6 +6,7 @@ AccountItem::AccountItem(Account *account)
 {
     m_account = account;
     setText(account->Email());
+    m_email = account->Email();
 
     loadFolders();
 }
@@ -29,10 +30,20 @@ void AccountItem::addFolders(QStandardItem *parent, QList<Folder *> folders, con
 void AccountItem::getFolders()
 {
     ImapService *service = m_account->IMAPService();
-    QList<Folder *> *folders = service->getFolders("*");
+    QList<Folder *> *folders = service->getFolders(m_folderList);
 
     addFolders(this, *folders, m_account->Email());
     emit foldersLoadFinished();
+}
+
+const QString &AccountItem::email() const
+{
+    return m_email;
+}
+
+const QStringList &AccountItem::folderList() const
+{
+    return m_folderList;
 }
 
 Account *AccountItem::account() const

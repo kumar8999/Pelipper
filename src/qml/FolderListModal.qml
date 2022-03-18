@@ -6,53 +6,24 @@ import org.kde.kirigami 2.5 as Kirigami
 Kirigami.OverlaySheet {
     id: folderList
 
-    TreeView {
-        id: treeView
-        Layout.fillHeight: true
-        Layout.fillWidth: true
-        headerVisible: false
-        model: session.folderListModel
-        alternatingRowColors: false
-        frameVisible: false
-        anchors.margins: 0
+    property string accountName: ""
 
-        //    backgroundVisible: false
-        TableViewColumn {
-            title: "Name"
-            role: "display"
-        }
+    ListView {
+        id: folderListView
 
-        BusyIndicator {
-            anchors.centerIn: parent
-            visible: session.folderListModel.loading
-        }
+        model: session.folderListModel.folderList
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.RightButton
+        delegate: Kirigami.BasicListItem {
+            text: modelData
+
             onClicked: {
-                folderContextMenu.popup()
+                session.messageListModel.moveMessages(modelData)
             }
-            onPressAndHold: {
-                if (mouse.source === Qt.MouseEventNotSynthesized)
-                    folderContextMenu.popup()
-            }
-        }
-
-        function expandRow() {
-            var indexes = session.folderListModel.rowCount()
-
-            for (var i = 0; i < indexes; i++) {
-                treeView.expand(session.folderListModel.index(i, 0))
-            }
-        }
-
-        Component.onCompleted: {
-            session.folderListModel.loadingChanged.connect(expandRow)
         }
     }
 
-    Component.onCompleted: {
-
+    onAccountNameChanged: {
+        console.log("on account name changed")
+        session.folderListModel.loadFolderList(accountName)
     }
 }

@@ -33,7 +33,7 @@ public:
 
     bool selectFolder(const QString &folderName);
 
-    QList<Folder *> *getFolders(const QString &folderName = "*");
+    QList<Folder *> *getFolders(QStringList &folderListstr);
     Folder *getFolder(const QString &foldername);
 
     QList<ssize_t> getNonCachedUids(const QString &foldername);
@@ -48,9 +48,7 @@ public:
 
     bool deleteMessage(const QString &foldername, QList<ssize_t> uidList);
 
-    bool moveMessage(const QString &souceFolderName,
-                     const QString &destFolderName,
-                     QList<ssize_t> uidList);
+    bool moveMessage(const QString &souceFolderName, const QString &destFolderName, QList<ssize_t> uidList);
 
     int idleStart(const QString &foldername);
     bool idleDone();

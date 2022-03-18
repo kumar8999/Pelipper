@@ -1,15 +1,13 @@
 import QtQuick 2.0
 import QtQuick.Layouts 1.12
-import QtQuick.Controls 2.12 as Controls
+import QtQuick.Controls 2.15 as Controls
 import org.kde.kirigami 2.13 as Kirigami
+import QtQuick.Controls.Styles 1.4
 
-Controls.Dialog {
+Kirigami.Page {
     property string serviceProvider: ""
 
     id: addSheet
-    x: (parent.width - width) / 2
-    y: (parent.height - height) / 2
-    modal: true
     title: qsTr("Add Account")
 
     footer: Controls.DialogButtonBox {
@@ -45,19 +43,6 @@ Controls.Dialog {
             visible: false
         }
 
-        Controls.ComboBox {
-            id: serviceProviderField
-            model: ["Gmail", "Others"]
-            onActivated: {
-                serviceProvider = currentText
-                handleServiceProvider()
-            }
-            Component.onCompleted: {
-                serviceProvider = "Gmail"
-                handleServiceProvider()
-            }
-        }
-
         Controls.TextField {
             id: nameField
             placeholderText: qsTr("Enter Username")
@@ -73,16 +58,31 @@ Controls.Dialog {
             id: passwordField
             echoMode: TextInput.PasswordEchoOnEdit
             placeholderText: qsTr("Enter Password ")
+
+            Controls.ToolButton {
+                anchors.right: parent.right
+                icon.name: qsTr("password-show-on")
+
+                onClicked: {
+                    if (checked) {
+                        passwordField.echoMode = TextInput.Normal
+                    } else {
+                        passwordField.echoMode = TextInput.PasswordEchoOnEdit
+                    }
+                }
+            }
         }
 
-        Controls.CheckBox {
-            text: qsTr("Show Password")
-            onClicked: {
-                if (checked) {
-                    passwordField.echoMode = TextInput.Normal
-                } else {
-                    passwordField.echoMode = TextInput.PasswordEchoOnEdit
-                }
+        Controls.ComboBox {
+            id: serviceProviderField
+            model: ["Gmail", "Others"]
+            onActivated: {
+                serviceProvider = currentText
+                handleServiceProvider()
+            }
+            Component.onCompleted: {
+                serviceProvider = "Gmail"
+                handleServiceProvider()
             }
         }
 
