@@ -11,6 +11,7 @@ public:
 
 signals:
 
+private:
 };
 
 #endif // CACHEMANAGER_H

@@ -1,18 +1,13 @@
 #include "folderlistmodel.h"
 
-#include "../backend/session.h"
-
 #include <QDebug>
-#include <QtConcurrent>
 
 FolderListModel::FolderListModel(QObject *parent)
     : m_loading(false)
     , QStandardItemModel(parent)
 {
-    auto session = Session::getInstance();
+    m_folderhandler = nullptr;
     m_settings = new Settings(this);
-
-    connect(session, &Session::accountAdded, this, &FolderListModel::addAccount);
 }
 
 void FolderListModel::selectFolder(QModelIndex index)
@@ -34,63 +29,65 @@ void FolderListModel::selectFolder(QModelIndex index)
     }
 }
 
-void FolderListModel::loadFolderList(const QString &accountEmail)
-{
-    qDebug() << "here " << accountEmail;
-    if (accountEmail != "") {
-        for (int i = 0; i < rowCount(); i++) {
-            AccountItem *accountItem = static_cast<AccountItem *>(itemFromIndex(this->index(i, 0)));
-            qDebug() << accountItem->email();
-            if (accountItem->email() == accountEmail) {
-                qDebug() << accountItem->folderList();
-                setFolderList(accountItem->folderList());
-            }
-        }
-    }
-}
-
-void FolderListModel::addAccount(Account *account)
-{
-    setLoading(true);
-
-    AccountItem *item = new AccountItem(account);
-    this->appendRow(item);
-    connect(item, &AccountItem::foldersLoadFinished, this, &FolderListModel::onFoldersLoadFinished);
-}
-
 void FolderListModel::onFoldersLoadFinished()
 {
     setLoading(false);
 
-    AccountItem *item = static_cast<AccountItem *>(sender());
-    Account *account = item->account();
-    ImapService *service = account->IMAPService();
+    QMap<Account *, QList<Folder *> *> folders = m_folderhandler->folders();
+    QMapIterator<Account *, QList<Folder *> *> folderIter(folders);
 
-    QString email;
-    QString foldername;
-    m_settings->getSelectedFolder(email, foldername);
+    while (folderIter.hasNext()) {
+        folderIter.next();
 
-    m_selectFolderThread.cancel();
-    QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
+        Account *account = folderIter.key();
+        QList<Folder *> *folderList = folderIter.value();
 
-    //    if (email == account->Email()) {
-    //        m_selectFolderThread = QtConcurrent::run([&]() {
-    //            Folder *folder = service->getFolder(foldername);
+        AccountItem *item = nullptr;
+        int row = -1;
 
-    //            if (folder != nullptr) {
-    //                accountFolder->insert(account, folder);
-    //            }
-    //        });
-    //    } else {
-    //        m_selectFolderThread = QtConcurrent::run([&]() {
-    //            Folder *folder = service->getFolder("INBOX");
+        if (m_accountList.contains(account->Email())) {
+            for (int i = 0; i < this->rowCount(); i++) {
+                AccountItem *accountItem = static_cast<AccountItem *>(this->item(i));
 
-    //            if (folder != nullptr) {
-    //                accountFolder->insert(account, folder);
-    //            }
-    //        });
-    //    }
-    //    emit folderSelected(accountFolder);
+                if (accountItem->email() == account->Email()) {
+                    row = i;
+                    item = accountItem;
+                    item->clearAll();
+                }
+            }
+        }
+
+        if (item == nullptr) {
+            item = new AccountItem(account);
+        }
+
+        addFolders(item, *folderList);
+
+        if (row == -1) {
+            this->appendRow(item);
+            m_accountList.append(account->Email());
+        }
+
+        m_rootItems.append(item);
+    }
+}
+
+void FolderListModel::addFolders(QStandardItem *parent, QList<Folder *> folders)
+{
+    for (auto *folder : folders) {
+        FolderItem *item = new FolderItem(folder);
+        parent->appendRow(item);
+        if (folder->hasChildren()) {
+            addFolders(item, folder->Children());
+        }
+    }
+}
+
+void FolderListModel::setFolderhandler(FolderHandler *newFolderhandler)
+{
+    m_folderhandler = newFolderhandler;
+
+    connect(m_folderhandler, &FolderHandler::folderReadFinished, this, &FolderListModel::onFoldersLoadFinished);
 }
 
 void FolderListModel::setFolderList(const QStringList &newFolderList)
@@ -112,9 +109,4 @@ void FolderListModel::setLoading(bool newLoading)
         return;
     m_loading = newLoading;
     emit loadingChanged();
-}
-
-const QStringList &FolderListModel::folderList() const
-{
-    return m_folderList;
 }

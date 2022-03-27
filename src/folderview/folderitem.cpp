@@ -7,6 +7,12 @@ FolderItem::FolderItem(Account *account, Folder *folder)
     setText(folder->DisplayName());
 }
 
+FolderItem::FolderItem(Folder *folder)
+{
+    m_folder = folder;
+    setText(folder->DisplayName());
+}
+
 QString FolderItem::Type() const
 {
     return "FolderItem";

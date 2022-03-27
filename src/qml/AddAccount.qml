@@ -163,7 +163,6 @@ Kirigami.Page {
         if (isSuccess) {
             inlineMessage.text = "Logged In Successfully"
             inlineMessage.visible = false
-            addSheet.close()
             nameField.text = ""
             emailField.text = ""
             passwordField.text = ""
@@ -171,6 +170,7 @@ Kirigami.Page {
             imapPortField.text = ""
             smtpServerField.text = ""
             smtpPortField.text = ""
+            applicationWindow().pageStack.pop()
         } else {
             inlineMessage.text = "Error Login"
             inlineMessage.type = Kirigami.MessageType.Error

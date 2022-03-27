@@ -1,5 +1,7 @@
 #include "application.h"
 
+#include "backend/messagehandler.h"
+
 #include <QtConcurrent>
 
 Application::Application(QObject *parent)
@@ -10,21 +12,28 @@ Application::Application(QObject *parent)
 {
     m_Settings = new Settings(this);
     m_folderListModel = new FolderListModel(this);
+    m_folderHandler = new FolderHandler(this);
+    m_folderListModel->setFolderhandler(m_folderHandler);
+    m_syncManager = new SyncManager(this);
+    m_folderHandler->setSyncmanager(m_syncManager);
+
     MessageListModel *_messageListModel = new MessageListModel(this);
+    MessageHandler *messageHandler = new MessageHandler(this);
+
 
     m_messageListModel = new SortModel(this);
     m_messageListModel->setModel(_messageListModel);
     m_messageListModel->setSortRole(Roles::DateRole);
     m_messageListModel->sort(0, Qt::DescendingOrder);
 
-    m_attachmentListModel = new AttachmentModel(this);
+    //    m_attachmentListModel = new AttachmentModel(this);
 
     connect(m_folderListModel, &FolderListModel::folderSelected, _messageListModel, &MessageListModel::onFolderSelected);
 
-    connect(this, &Application::messageReadReady, this, [=](Message *msg) {
-        setMessageItem(new MessageItem(msg, this));
-        setHasMsgLoaded(true);
-    });
+    //    connect(this, &Application::messageReadReady, this, [=](Message *msg) {
+    //        setMessageItem(new MessageItem(msg, this));
+    //        setHasMsgLoaded(true);
+    //    });
 
     loadAccounts();
 }

@@ -45,12 +45,16 @@ set(PROJECT_SOURCES
     src/backend/contact.h src/backend/contact.cpp
     src/backend/flags.h src/backend/flags.cpp
     src/backend/address.h src/backend/address.cpp
+    src/backend/messagehandler.h src/backend/messagehandler.cpp
+    src/backend/folderhandler.h src/backend/folderhandler.cpp
     src/backend/messagepart.h src/backend/messagepart.cpp
     src/backend/messageheaders.h src/backend/messageheaders.cpp
     src/backend/message.h src/backend/message.cpp
     src/backend/folder.h src/backend/folder.cpp
     src/backend/cachemanager.h src/backend/cachemanager.cpp
     src/backend/idlemanager.h src/backend/idlemanager.cpp
+    src/backend/syncworker.h src/backend/syncworker.cpp
+    src/backend/syncmanager.h src/backend/syncmanager.cpp
     src/backend/smtpservice.h src/backend/smtpservice.cpp
     src/backend/imapcache.h src/backend/imapcache.cpp
     src/backend/imapservice.h src/backend/imapservice.cpp

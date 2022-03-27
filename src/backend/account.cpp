@@ -19,18 +19,13 @@ Account::Account(const QString &username,
     , m_SmtpPort(smtpPort)
     , QObject(parent)
 {
-    m_ImapService = new ImapService(email,
-                                    password,
-                                    imapServer,
-                                    imapPort,
-                                    ConnectionType::ConnectionSSL);
-    m_SmtpService
-        = new SmtpService(m_Username, m_Password, m_SmtpServer, m_SmtpPort, m_Email, 0, this);
-    m_IdleManager = new IdleManager(new ImapService(m_Email,
-                                                    m_Password,
-                                                    m_ImapServer,
-                                                    m_ImapPort,
-                                                    ConnectionType::ConnectionSSL));
+    m_ImapService = new ImapService(email, password, imapServer, imapPort, ConnectionType::ConnectionSSL);
+    m_SmtpService = new SmtpService(m_Username, m_Password, m_SmtpServer, m_SmtpPort, m_Email, 0, this);
+    //    m_IdleManager = new IdleManager(new ImapService(email, password, imapServer, imapPort, ConnectionType::ConnectionSSL));
+
+    m_cacheService = new ImapCache(m_Email);
+
+    //    m_IdleManager->start();
 }
 
 Account::~Account()
@@ -59,12 +54,19 @@ SmtpService *Account::SMTPService() const
     return m_SmtpService;
 }
 
-void Account::startCacheService()
+ImapService *Account::idleService() const
 {
-    //    qDebug() << m_Email << m_Password;
-    //    ImapService *imapService = new ImapService(m_Email, m_Password, m_ImapServer, m_ImapPort);
-    //    qDebug() << imapService->connect();
-    //    qDebug() << imapService->login();
+    return m_idleService;
+}
 
-    //    imapService->startCache();
+ImapService *Account::createIdleService()
+{
+    m_idleService = new ImapService(m_Email, m_Password, m_ImapServer, m_ImapPort, ConnectionType::ConnectionSSL);
+
+    return m_idleService;
+}
+
+ImapCache *Account::cacheService() const
+{
+    return m_cacheService;
 }

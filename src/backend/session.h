@@ -17,7 +17,7 @@ public:
 
     QList<Account *> getAccounts();
 
-    Account *getAccount(QString email);
+    Account *getAccount(const QString &email);
 
     void addAccount(Account *account);
 

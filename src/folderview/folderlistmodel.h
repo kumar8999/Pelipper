@@ -2,6 +2,7 @@
 #define FOLDERLISTMODEL_H
 
 #include "../backend/account.h"
+#include "../backend/folderhandler.h"
 #include "../backend/settings.h"
 #include "accountitem.h"
 
@@ -13,7 +14,6 @@ class FolderListModel : public QStandardItemModel
     Q_OBJECT
 
     Q_PROPERTY(bool loading READ loading WRITE setLoading NOTIFY loadingChanged)
-    Q_PROPERTY(QStringList folderList READ folderList WRITE setFolderList NOTIFY folderListChanged)
 
 public:
     FolderListModel(QObject *parent = nullptr);
@@ -26,28 +26,27 @@ public:
 
     const QStringList &folderList() const;
 
+    void setFolderhandler(FolderHandler *newFolderhandler);
+
 public slots:
     void selectFolder(QModelIndex index);
 
-    void loadFolderList(const QString &accountEmail = "");
 signals:
     void loadingChanged();
 
     void folderSelected(QHash<Account *, Folder *> *accountFolders);
 
-    void folderListChanged();
-
 private slots:
-    void addAccount(Account *account);
-
     void onFoldersLoadFinished();
+
+private:
+    void addFolders(QStandardItem *parent, QList<Folder *> folders);
 
 private:
     bool m_loading;
     Settings *m_settings;
-    QFuture<void> m_selectFolderThread;
-
-    QStringList m_folderList;
+    FolderHandler *m_folderhandler;
+    QStringList m_accountList;
 };
 
 #endif // FOLDERLISTMODEL_H

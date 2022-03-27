@@ -9,6 +9,8 @@ class FolderItem : public BaseFolderItem
 public:
     FolderItem(Account *account, Folder *folder);
 
+    FolderItem(Folder *folder);
+
     QString Type() const override;
 
     Account *account() const;

@@ -98,7 +98,7 @@ void MessageListModel::onFolderSelected(QHash<Account *, Folder *> *accountFolde
         m_future.cancel();
     }
 
-    m_future = QtConcurrent::run(this, &MessageListModel::loadMessage, accountFolder);
+    //    m_future = QtConcurrent::run(this, &MessageListModel::loadMessage, accountFolder);
 }
 
 void MessageListModel::setSeenFlag(int row)
@@ -152,28 +152,28 @@ void MessageListModel::loadMessage(QHash<Account *, Folder *> *accountFolder)
 {
     setLoading(true);
 
-    QHashIterator<Account *, Folder *> iter(*accountFolder);
+    //    QHashIterator<Account *, Folder *> iter(*accountFolder);
 
-    while (iter.hasNext()) {
-        iter.next();
-        Account *account = iter.key();
-        Folder *folder = iter.value();
+    //    while (iter.hasNext()) {
+    //        iter.next();
+    //        Account *account = iter.key();
+    //        Folder *folder = iter.value();
 
-        ImapService *service = account->IMAPService();
-        QList<Message *> *msgList = service->getAllHeaders(folder->FullName());
+    //        ImapService *service = account->IMAPService();
+    //        QList<Message *> *msgList = service->getAllHeaders(folder->FullName());
 
-        if (msgList == nullptr) {
-            qDebug() << "error loading headers";
-            continue;
-        }
+    //        if (msgList == nullptr) {
+    //            qDebug() << "error loading headers";
+    //            continue;
+    //        }
 
-        for (int i = 0; i < msgList->length(); i++) {
-            Message *msg = msgList->at(i);
-            folders.insert(msg->uid(), folder->FullName());
-        }
+    //        for (int i = 0; i < msgList->length(); i++) {
+    //            Message *msg = msgList->at(i);
+    //            folders.insert(msg->uid(), folder->FullName());
+    //        }
 
-        emit messageReadReady(msgList);
-    }
+    //        emit messageReadReady(msgList);
+    //    }
 }
 
 void MessageListModel::_deleteMessages(QModelIndexList indexList)
@@ -212,7 +212,7 @@ void MessageListModel::_deleteMessages(QModelIndexList indexList)
         imapService->deleteMessage(folderName, uidList);
     }
 
-    emit deleteMessages(indexList);
+    //    emit deleteMessages(indexList);
 }
 
 void MessageListModel::_moveMessages(QModelIndexList indexList, const QString &destDir)

@@ -4,6 +4,7 @@
 #include "../Threads/messagelistthread.h"
 #include "../backend/account.h"
 #include "../backend/message.h"
+#include "../backend/messagehandler.h"
 #include "roles.h"
 
 #include <QAbstractListModel>
@@ -65,6 +66,8 @@ private:
 private:
     QList<Message *> *m_messageList;
     QMap<ssize_t, QString> folders;
+
+    MessageHandler *m_messageHandler;
 
     bool m_loading;
 

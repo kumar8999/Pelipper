@@ -1,8 +1,10 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "backend/folderhandler.h"
 #include "backend/session.h"
 #include "backend/settings.h"
+#include "backend/syncmanager.h"
 #include "composer/attachmentmodel.h"
 #include "folderview/folderlistmodel.h"
 #include "messagelistview/messagelistmodel.h"
@@ -99,6 +101,8 @@ private:
     SortModel *m_messageListModel;
     MessageItem *m_messageItem;
     AttachmentModel *m_attachmentListModel;
+    FolderHandler *m_folderHandler;
+    SyncManager *m_syncManager;
 };
 
 #endif // APPLICATION_H

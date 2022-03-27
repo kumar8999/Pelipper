@@ -21,7 +21,7 @@ QList<Account *> Session::getAccounts()
     return m_Accounts->values();
 }
 
-Account *Session::getAccount(QString email)
+Account *Session::getAccount(const QString &email)
 {
     if (m_Accounts->contains(email)) {
         return m_Accounts->value(email);

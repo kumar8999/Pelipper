@@ -77,7 +77,8 @@ Kirigami.ApplicationWindow {
                 anchors.centerIn: parent
                 text: qsTr("Add Account")
                 onClicked: {
-                    addAccount.open()
+                    applicationWindow().pageStack.layers.push(
+                                "qrc:/qml/AddAccount.qml")
                 }
             }
         }

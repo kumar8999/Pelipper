@@ -3,6 +3,7 @@
 
 #include "folder.h"
 #include "idlemanager.h"
+#include "imapcache.h"
 #include "imapservice.h"
 #include "smtpservice.h"
 
@@ -31,7 +32,11 @@ public:
 
     SmtpService *SMTPService() const;
 
-    void startCacheService();
+    ImapService *idleService() const;
+
+    ImapService *createIdleService();
+
+    ImapCache *cacheService() const;
 
 private:
     QString m_Username;
@@ -43,8 +48,10 @@ private:
     int m_SmtpPort;
 
     ImapService *m_ImapService;
+    ImapService *m_idleService;
     IdleManager *m_IdleManager;
     SmtpService *m_SmtpService;
+    ImapCache *m_cacheService;
 };
 
 #endif // ACCOUNT_H

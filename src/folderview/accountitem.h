@@ -14,26 +14,15 @@ class AccountItem : public QObject, public QStandardItem
 public:
     explicit AccountItem(Account *account);
 
-    void loadFolders();
-
     Account *account() const;
-
-    const QStringList &folderList() const;
 
     const QString &email() const;
 
-signals:
-    void foldersLoadFinished();
-
-private:
-    void addFolders(QStandardItem *parent, QList<Folder *> folders, const QString &email);
-
-    void getFolders();
+    void clearAll();
 
 private:
     QString m_email;
     Account *m_account;
-    QStringList m_folderList;
 };
 
 #endif // ACCOUNTITEM_H

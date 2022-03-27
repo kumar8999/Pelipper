@@ -1,10 +1,10 @@
 #ifndef IDLEMANAGER_H
 #define IDLEMANAGER_H
 
-#include "imapservice.h"
-
 #include <QObject>
 #include <QSocketDescriptor>
+
+class ImapService;
 
 class IdleManager : public QObject
 {
@@ -14,7 +14,12 @@ public:
 
     void start();
 
+    const QString &folderName() const;
+    void setFolderName(const QString &newFolderName);
+
 signals:
+
+    void newMessagesRecieved(QString foldername);
 
 private slots:
 
@@ -23,6 +28,10 @@ private slots:
 private:
 private:
     ImapService *m_ImapService;
+
+    QString m_folderName;
+
+    QList<ssize_t> m_uidList;
 };
 
 #endif // IDLEMANAGER_H
