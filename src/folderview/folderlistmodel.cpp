@@ -21,6 +21,8 @@ void FolderListModel::selectFolder(QModelIndex index)
 
         QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
 
+        qDebug() << account->Email() << "account;";
+
         accountFolder->insert(account, item_->folder());
 
         m_settings->setSelectedFolder(account->Email(), item_->folder()->FullName());
@@ -61,24 +63,22 @@ void FolderListModel::onFoldersLoadFinished()
             item = new AccountItem(account);
         }
 
-        addFolders(item, *folderList);
+        addFolders(item, *folderList, account);
 
         if (row == -1) {
             this->appendRow(item);
             m_accountList.append(account->Email());
         }
-
-        m_rootItems.append(item);
     }
 }
 
-void FolderListModel::addFolders(QStandardItem *parent, QList<Folder *> folders)
+void FolderListModel::addFolders(QStandardItem *parent, QList<Folder *> folders, Account *account)
 {
     for (auto *folder : folders) {
-        FolderItem *item = new FolderItem(folder);
+        FolderItem *item = new FolderItem(account, folder);
         parent->appendRow(item);
         if (folder->hasChildren()) {
-            addFolders(item, folder->Children());
+            addFolders(item, folder->Children(), account);
         }
     }
 }
@@ -88,14 +88,6 @@ void FolderListModel::setFolderhandler(FolderHandler *newFolderhandler)
     m_folderhandler = newFolderhandler;
 
     connect(m_folderhandler, &FolderHandler::folderReadFinished, this, &FolderListModel::onFoldersLoadFinished);
-}
-
-void FolderListModel::setFolderList(const QStringList &newFolderList)
-{
-    if (m_folderList == newFolderList)
-        return;
-    m_folderList = newFolderList;
-    emit folderListChanged();
 }
 
 bool FolderListModel::loading() const

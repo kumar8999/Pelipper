@@ -40,7 +40,7 @@ private slots:
     void onFoldersLoadFinished();
 
 private:
-    void addFolders(QStandardItem *parent, QList<Folder *> folders);
+    void addFolders(QStandardItem *parent, QList<Folder *> folders, Account *account);
 
 private:
     bool m_loading;

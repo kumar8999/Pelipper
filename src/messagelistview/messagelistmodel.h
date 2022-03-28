@@ -37,6 +37,10 @@ public:
 
     void moveMessages(QModelIndexList indexList, const QString &destDir);
 
+    void setMessageHandler(MessageHandler *newMessageHandler);
+
+    void selectMessage(QModelIndex index);
+
 public slots:
     void onFolderSelected(QHash<Account *, Folder *> *accountFolder);
 
@@ -54,10 +58,10 @@ private slots:
 
     void onDeleteMessage(QModelIndexList indexList);
 
+    void onMessageLoadFinished();
+
 private:
     QString parseDate(const QDateTime &datetime) const;
-
-    void loadMessage(QHash<Account *, Folder *> *accountFolder);
 
     void _deleteMessages(QModelIndexList indexList);
 

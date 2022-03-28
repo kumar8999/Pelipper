@@ -167,12 +167,19 @@ void SortModel::moveMessages(const QString &destFolderName)
 
         auto _model = static_cast<MessageListModel *>(sourceModel());
 
-        for (auto selectedIndex : selectedIndexes) {
+        for (auto selectedIndex : qAsConst(selectedIndexes)) {
             indexList.append(mapToSource(selectedIndex));
         }
 
         _model->moveMessages(indexList, destFolderName);
     }
+}
+
+void SortModel::messageSelected(int indexValue)
+{
+    QModelIndex index = this->index(indexValue, 0);
+    auto _model = static_cast<MessageListModel *>(sourceModel());
+    QModelIndex sourceIndex = mapToSource(index);
 }
 
 void SortModel::setModel(QAbstractListModel *model)

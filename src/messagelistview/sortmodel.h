@@ -44,6 +44,8 @@ public slots:
 
     void moveMessages(const QString &destFolderName);
 
+    void messageSelected(int indexValue);
+
 signals:
     void loadingChanged();
 

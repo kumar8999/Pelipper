@@ -57,6 +57,8 @@ QVariant MessageListModel::data(const QModelIndex &index, int role) const
         return flag->seenFlag();
     case Roles::MessageRecentRole:
         return flag->recentFlag();
+    case Roles::FolderRole:
+        return message->folder();
     }
 
     return QVariant();
@@ -73,6 +75,7 @@ QHash<int, QByteArray> MessageListModel::roleNames() const
     roles[Roles::MessageSeenRole] = "Seen";
     roles[Roles::MessageRecentRole] = "Recent";
     roles[Roles::SelectedRole] = "Selected";
+    roles[Roles::FolderRole] = "Folder";
     return roles;
 }
 
@@ -90,13 +93,16 @@ void MessageListModel::appendRows(QList<Message *> *messageList)
 void MessageListModel::onFolderSelected(QHash<Account *, Folder *> *accountFolder)
 {
     beginResetModel();
+
     qDeleteAll(*m_messageList);
     m_messageList->clear();
     endResetModel();
 
-    if (m_future.isRunning()) {
-        m_future.cancel();
-    }
+    m_messageHandler->fetchHeaders(accountFolder);
+
+    //    if (m_future.isRunning()) {
+    //        m_future.cancel();
+    //    }
 
     //    m_future = QtConcurrent::run(this, &MessageListModel::loadMessage, accountFolder);
 }
@@ -124,6 +130,20 @@ void MessageListModel::onDeleteMessage(QModelIndexList indexList)
     }
 }
 
+void MessageListModel::onMessageLoadFinished()
+{
+    QMap<QString, QList<Message *> *> message = m_messageHandler->messages();
+
+    QMapIterator<QString, QList<Message *> *> iter(message);
+
+    while (iter.hasNext()) {
+        iter.next();
+        QList<Message *> *messageList = iter.value();
+
+        appendRows(messageList);
+    }
+}
+
 QString MessageListModel::parseDate(const QDateTime &datetime) const
 {
     QDateTime currentDate = QDateTime::currentDateTime();
@@ -146,34 +166,6 @@ QString MessageListModel::parseDate(const QDateTime &datetime) const
     } else {
         return datetime.date().toString("MMM d");
     }
-}
-
-void MessageListModel::loadMessage(QHash<Account *, Folder *> *accountFolder)
-{
-    setLoading(true);
-
-    //    QHashIterator<Account *, Folder *> iter(*accountFolder);
-
-    //    while (iter.hasNext()) {
-    //        iter.next();
-    //        Account *account = iter.key();
-    //        Folder *folder = iter.value();
-
-    //        ImapService *service = account->IMAPService();
-    //        QList<Message *> *msgList = service->getAllHeaders(folder->FullName());
-
-    //        if (msgList == nullptr) {
-    //            qDebug() << "error loading headers";
-    //            continue;
-    //        }
-
-    //        for (int i = 0; i < msgList->length(); i++) {
-    //            Message *msg = msgList->at(i);
-    //            folders.insert(msg->uid(), folder->FullName());
-    //        }
-
-    //        emit messageReadReady(msgList);
-    //    }
 }
 
 void MessageListModel::_deleteMessages(QModelIndexList indexList)
@@ -247,6 +239,23 @@ void MessageListModel::_moveMessages(QModelIndexList indexList, const QString &d
         ImapService *imapService = account->IMAPService();
         imapService->moveMessage(folderName, destDir, uidList);
     }
+}
+
+void MessageListModel::setMessageHandler(MessageHandler *newMessageHandler)
+{
+    m_messageHandler = newMessageHandler;
+
+    connect(m_messageHandler, &MessageHandler::messageLoadFinished, this, &MessageListModel::onMessageLoadFinished);
+}
+
+void MessageListModel::selectMessage(QModelIndex index)
+{
+    int row = index.row();
+
+    Message *msg = m_messageList->at(row);
+    Account *account = Session::getInstance()->getAccount(msg->accountEmail());
+
+    m_messageHandler->fetchMessage(account, msg->folder(), msg->uid());
 }
 
 bool MessageListModel::loading() const

@@ -19,7 +19,8 @@ Application::Application(QObject *parent)
 
     MessageListModel *_messageListModel = new MessageListModel(this);
     MessageHandler *messageHandler = new MessageHandler(this);
-
+    _messageListModel->setMessageHandler(messageHandler);
+    messageHandler->setSyncmanager(m_syncManager);
 
     m_messageListModel = new SortModel(this);
     m_messageListModel->setModel(_messageListModel);
@@ -30,10 +31,15 @@ Application::Application(QObject *parent)
 
     connect(m_folderListModel, &FolderListModel::folderSelected, _messageListModel, &MessageListModel::onFolderSelected);
 
-    //    connect(this, &Application::messageReadReady, this, [=](Message *msg) {
-    //        setMessageItem(new MessageItem(msg, this));
-    //        setHasMsgLoaded(true);
-    //    });
+    connect(this, &Application::messageReadReady, this, [=](Message *msg) {
+        setMessageItem(new MessageItem(msg, this));
+        setHasMsgLoaded(true);
+    });
+
+    connect(m_syncManager, &SyncManager::messageReadFinished, this, [=](Account *account, Message *msg) {
+        setMessageItem(new MessageItem(msg, this));
+        setHasMsgLoaded(true);
+    });
 
     loadAccounts();
 }
@@ -144,7 +150,7 @@ void Application::setMessageListModel(SortModel *newMessageListModel)
     emit messageListModelChanged();
 }
 
-void Application::selectedMessage(const QString &accountEmail, int uid)
+void Application::selectedMessage(const QString &accountEmail, const QString &foldername, int uid)
 {
     QtConcurrent::run([=]() {
         Session *session = Session::getInstance();

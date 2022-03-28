@@ -392,6 +392,16 @@ QString Message::mimeToUtf8(std::string str)
     }
 }
 
+const QString &Message::folder() const
+{
+    return m_folder;
+}
+
+void Message::setFolder(const QString &newFolder)
+{
+    m_folder = newFolder;
+}
+
 MessageHeader *Message::header() const
 {
     return m_header;

@@ -39,6 +39,9 @@ public:
 
     MessageHeader *header() const;
 
+    const QString &folder() const;
+    void setFolder(const QString &newFolder);
+
 private:
     void parseHeaderFields(mailimf_fields *headerFields);
     Address *parseFrom(mailimf_from *mbList);
@@ -61,6 +64,7 @@ private:
 
 private:
     QString m_accountEmail;
+    QString m_folder;
     ssize_t m_uid;
     QString m_data;
 

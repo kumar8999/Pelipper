@@ -94,7 +94,7 @@ ListView {
                 }
 
                 session.messageListModel.setSeenFlag(index)
-                session.selectedMessage(model.Email, model.Uid)
+                session.selectedMessage(model.Email, model.Folder, model.Uid)
             }
         }
     }

@@ -47,7 +47,7 @@ public:
     void setAttachmentListModel(AttachmentModel *newAttachmentListModel);
 
 public slots:
-    void selectedMessage(const QString &accountEmail, int uid);
+    void selectedMessage(const QString &accountEmail, const QString &foldername, int uid);
 
     void sendMessage(const QString &from,
                      const QString &to,
