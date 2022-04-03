@@ -42,7 +42,7 @@ public:
     void selectMessage(QModelIndex index);
 
 public slots:
-    void onFolderSelected(QHash<Account *, Folder *> *accountFolder);
+    void onFolderSelected(QHash<Account *, QString> *accountFolder);
 
     void setSeenFlag(int row);
 

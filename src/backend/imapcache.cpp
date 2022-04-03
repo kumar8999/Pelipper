@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
@@ -13,85 +14,145 @@ ImapCache::ImapCache(const QString &email, QObject *parent)
     , QObject(parent)
 {
     QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
-    m_CacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    QString cacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
-    if (m_CacheFolderPath == "") {
-        m_CacheFolderPath = QDir::homePath() + "/.cache";
+    if (cacheFolderPath == "") {
+        cacheFolderPath = QDir::homePath() + "/.cache/Pelipper/";
+    } else {
+        cacheFolderPath += "/Pelipper";
     }
 
-    m_CacheFolderPath = m_CacheFolderPath + "/" + accountHash;
+    cacheFolderPath = cacheFolderPath + "/" + accountHash;
 
     QDir dir;
-    dir.mkpath(m_CacheFolderPath);
 
-    m_Settings = new QSettings(m_CacheFolderPath + "/" + accountHash + "_", QSettings::IniFormat, this);
+    if (dir.mkpath(cacheFolderPath)) {
+        m_cacheFilePath = cacheFolderPath + "/cache";
+    }
 }
 
 QList<Folder *> *ImapCache::getFolders()
 {
-    QStringList folders = m_Settings->value("folders", QStringList()).toStringList();
+    QFile file(m_cacheFilePath);
 
-    QMap<QString, Folder *> foldersMap;
     QList<Folder *> *folderList = new QList<Folder *>();
 
-    for (int i = 0; i < folders.length(); i++) {
-        auto folderfullname = folders.at(i);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning("Couldn't open save file.");
+        return folderList;
+    }
 
-        m_Settings->beginGroup("folder." + folderfullname);
-        QString fullname = m_Settings->value("fullname").toString();
-        QChar delimiter = m_Settings->value("delimiter").toChar();
-        m_Settings->endGroup();
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    QJsonArray folders = mainObj["folders"].toArray();
 
-        Folder *folder = new Folder(fullname, delimiter);
-        QString folderparentName = getParentFolderName(fullname, delimiter);
-
-        foldersMap.insert(fullname, folder);
-
-        if (folderparentName != "") {
-            Folder *parentFolder = foldersMap.value(folderparentName);
-            parentFolder->appendChild(folder);
-            continue;
-        }
-
-        folderList->append(folder);
+    for (auto folder : folders) {
+        folderList->append(getFolderObj(folder.toObject()));
     }
 
     return folderList;
 }
 
-bool ImapCache::insertFolders(const QList<Folder *> &folderList)
+QStringList ImapCache::fetchFoldersStr()
 {
-    QStringList folders;
+    QFile file(m_cacheFilePath);
 
-    for (int i = 0; i < folderList.length(); i++) {
-        auto folder = folderList.at(i);
-        folders.append(folder->FullName());
-
-        m_Settings->beginGroup("folder." + folder->FullName());
-        m_Settings->setValue("fullname", folder->FullName());
-        m_Settings->setValue("delimiter", folder->Delimiter());
-        m_Settings->endGroup();
-
-        if (folder->hasChildren()) {
-            auto childFolderList = folder->Children();
-
-            insertFolders(childFolderList);
-        }
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning("Couldn't open save file.");
+        return QStringList();
     }
 
-    m_Settings->setValue("folders", folders);
-    return true;
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    QJsonArray folderListArr = mainObj["foldersList"].toArray();
+
+    QStringList folderList;
+    for (const auto &folder : qAsConst(folderListArr)) {
+        folderList.append(folder.toString());
+    }
+
+    return folderList;
+}
+
+bool ImapCache::insertFoldersStr(const QStringList &folderList)
+{
+    QFile file(m_cacheFilePath);
+
+    if (!file.open(QIODevice::ReadWrite)) {
+        qWarning("Couldn't open save file.");
+        return false;
+    }
+
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    QJsonArray folderListArr;
+
+    for (const auto &folder : folderList) {
+        folderListArr.append(folder);
+    }
+
+    mainObj.insert("foldersList", folderListArr);
+
+    return file.write(QJsonDocument(mainObj).toJson());
+}
+
+bool ImapCache::insertFolders(const QList<Folder *> &folderList)
+{
+    QFile file(m_cacheFilePath);
+
+    if (!file.open(QIODevice::ReadWrite)) {
+        qWarning("Couldn't open save file.");
+        return false;
+    }
+
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    QJsonArray folders;
+
+    for (int i = 0; i < folderList.length(); i++) {
+        folders.append(insertFolderObj(folderList.at(i)));
+    }
+
+    mainObj.insert("folders", folders);
+
+    return file.write(QJsonDocument(mainObj).toJson());
+}
+
+void ImapCache::insertUidList(const QString &foldername, const QList<ssize_t> &uidList)
+{
+    QFile file(m_cacheFilePath);
+
+    if (!file.open(QIODevice::ReadWrite)) {
+        qWarning("Couldn't open save file.");
+        return;
+    }
+
+    QJsonArray uids;
+    for (const auto &uid : qAsConst(uidList)) {
+        uids.append(QString::number(uid));
+    }
+
+    QJsonObject uidObj;
+    uidObj[foldername] = uids;
+
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    mainObj.insert("uids", uidObj);
+
+    file.write(QJsonDocument(mainObj).toJson());
 }
 
 QList<ssize_t> ImapCache::getUidList(const QString &foldername)
 {
-    m_Settings->beginGroup("uids");
-    QStringList uids = m_Settings->value(foldername, QStringList()).toStringList();
-    m_Settings->endGroup();
+    QFile file(m_cacheFilePath);
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning("Couldn't open save file.");
+        return QList<ssize_t>();
+    }
+
+    QJsonObject mainObj = QJsonDocument().fromJson(file.readAll()).object();
+    QJsonObject uidObj = mainObj["uids"].toObject();
+    QJsonArray uids = uidObj[foldername].toArray();
 
     QList<ssize_t> uidList;
     for (const auto &uid : qAsConst(uids)) {
-        uidList.append(uid.toLong());
+        uidList.append(uid.toInt());
     }
 
     return uidList;
@@ -100,17 +161,28 @@ QList<ssize_t> ImapCache::getUidList(const QString &foldername)
 QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
 {
     QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
-    QString cachePath = QDir::homePath() + "/.cache/Pelipper/" + accountHash;
-    QDir dir(cachePath + "/MAILS");
+    QString cacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+
+    if (cacheFolderPath == "") {
+        cacheFolderPath = QDir::homePath() + "/.cache/Pelipper/";
+    } else {
+        cacheFolderPath += "/Pelipper";
+    }
+
+    cacheFolderPath = cacheFolderPath + "/" + accountHash;
+
+    QDir dir(cacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
         qDebug() << " dir not exists";
-        return nullptr;
+        return new QList<Message *>();
     }
 
-    m_Settings->beginGroup("uids");
-    QStringList uids = m_Settings->value(foldername, QStringList()).toStringList();
-    m_Settings->endGroup();
+    QList<ssize_t> uidList = getUidList(foldername);
+    QStringList uids;
+    for (const auto &uid : qAsConst(uidList)) {
+        uids.append(QString::number(uid));
+    }
 
     QList<Message *> *msgList = new QList<Message *>();
 
@@ -119,8 +191,7 @@ QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
     for (const auto &fileinfo : qAsConst(filenameList)) {
         QFile file(fileinfo.absoluteFilePath());
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            delete msgList;
-            return nullptr;
+            continue;
         }
 
         QTextStream in(&file);
@@ -141,8 +212,18 @@ QList<Message *> *ImapCache::getAllMessages(const QString &foldername)
 
 Message *ImapCache::getMessage(const QString &foldername, ssize_t uid, QString &data)
 {
-    QDir dir(m_CacheFolderPath + "/MAILS");
+    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
+    QString cacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
+    if (cacheFolderPath == "") {
+        cacheFolderPath = QDir::homePath() + "/.cache/Pelipper/";
+    } else {
+        cacheFolderPath += "/Pelipper";
+    }
+
+    cacheFolderPath = cacheFolderPath + "/" + accountHash;
+
+    QDir dir(cacheFolderPath + "/MAILS");
     if (!dir.exists()) {
         return nullptr;
     }
@@ -176,7 +257,7 @@ Message *ImapCache::getMessage(const QString &foldername, ssize_t uid, QString &
 
 Flags *ImapCache::getFlags(const ssize_t &uid)
 {
-    QFile file(m_CacheFolderPath + "/flags");
+    QFile file(m_cacheFilePath);
 
     if (!file.open(QIODevice::ReadWrite)) {
         qWarning("Couldn't open save file.");
@@ -199,10 +280,21 @@ Flags *ImapCache::getFlags(const ssize_t &uid)
 
 bool ImapCache::insertAllMessages(const QString &foldername, QList<Message *> *msgList)
 {
-    QDir dir(m_CacheFolderPath + "/MAILS");
+    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
+    QString cacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+
+    if (cacheFolderPath == "") {
+        cacheFolderPath = QDir::homePath() + "/.cache/Pelipper/";
+    } else {
+        cacheFolderPath += "/Pelipper";
+    }
+
+    cacheFolderPath = cacheFolderPath + "/" + accountHash;
+
+    QDir dir(cacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
-        bool result = dir.mkpath(m_CacheFolderPath + "/MAILS");
+        bool result = dir.mkpath(cacheFolderPath + "/MAILS");
 
         if (!result) {
             return false;
@@ -225,18 +317,26 @@ bool ImapCache::insertAllMessages(const QString &foldername, QList<Message *> *m
         saveFlags(msg->uid(), msg->flags());
     }
 
-    m_Settings->beginGroup("uids");
-    m_Settings->setValue(foldername, uidList);
-    m_Settings->endGroup();
     return true;
 }
 
 bool ImapCache::insertMessage(const QString &foldername, Message *msg)
 {
-    QDir dir(m_CacheFolderPath + "/MAILS");
+    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
+    QString cacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+
+    if (cacheFolderPath == "") {
+        cacheFolderPath = QDir::homePath() + "/.cache/Pelipper/";
+    } else {
+        cacheFolderPath += "/Pelipper";
+    }
+
+    cacheFolderPath = cacheFolderPath + "/" + accountHash;
+
+    QDir dir(cacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
-        bool result = dir.mkpath(m_CacheFolderPath + "/MAILS");
+        bool result = dir.mkpath(cacheFolderPath + "/MAILS");
 
         if (!result) {
             return false;
@@ -250,20 +350,12 @@ bool ImapCache::insertMessage(const QString &foldername, Message *msg)
     QTextStream out(&file);
     out << msg->Data();
 
-    QStringList uidList;
-
-    m_Settings->beginGroup("uids");
-    uidList = m_Settings->value(foldername, QStringList()).toStringList();
-    uidList.append(QString::number(msg->uid()));
-    m_Settings->setValue(foldername, uidList);
-    m_Settings->endGroup();
-
     return true;
 }
 
 bool ImapCache::saveFlags(const ssize_t &uid, Flags *flags)
 {
-    QFile file(m_CacheFolderPath + "/flags");
+    QFile file(m_cacheFilePath);
 
     if (!file.open(QIODevice::ReadWrite)) {
         qWarning("Couldn't open save file.");
@@ -286,7 +378,18 @@ bool ImapCache::saveFlags(const ssize_t &uid, Flags *flags)
 
 bool ImapCache::deleteMessage(const QString &foldername, QList<ssize_t> uidList)
 {
-    QDir dir(m_CacheFolderPath + "/MAILS");
+    QString accountHash = QString(QCryptographicHash::hash((m_Email.toUtf8()), QCryptographicHash::Md5).toHex());
+    QString cacheFolderPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+
+    if (cacheFolderPath == "") {
+        cacheFolderPath = QDir::homePath() + "/.cache/Pelipper/";
+    } else {
+        cacheFolderPath += "/Pelipper";
+    }
+
+    cacheFolderPath = cacheFolderPath + "/" + accountHash;
+
+    QDir dir(cacheFolderPath + "/MAILS");
 
     if (!dir.exists()) {
         return false;
@@ -321,4 +424,40 @@ QString ImapCache::getParentFolderName(const QString &fullfoldername, const QCha
     }
 
     return "";
+}
+
+QJsonObject ImapCache::insertFolderObj(Folder *folder)
+{
+    QJsonObject obj;
+
+    obj["foldername"] = folder->FullName();
+    obj["delimiter"] = QJsonValue(folder->Delimiter());
+
+    if (folder->hasChildren()) {
+        QJsonArray folderArr;
+        for (auto childFolder : folder->Children()) {
+            folderArr.append(insertFolderObj(childFolder));
+        }
+        obj["children"] = folderArr;
+    }
+
+    return obj;
+}
+
+Folder *ImapCache::getFolderObj(QJsonObject obj)
+{
+    QString foldername = obj["foldername"].toString();
+    QChar delimiter = obj["delimiter"].toVariant().toChar();
+    Folder *folder = new Folder(foldername, delimiter);
+
+    if (obj.contains("children")) {
+        QJsonArray folderArr = obj["children"].toArray();
+
+        for (auto childFolder : qAsConst(folderArr)) {
+            Folder *child = getFolderObj(childFolder.toObject());
+            folder->appendChild(child);
+        }
+    }
+
+    return folder;
 }

@@ -87,21 +87,30 @@ signals:
     void attachmentListModelChanged();
 
 private slots:
-    void onAccountAdded(Account *account);
+    //    void onAccountAdded(Account *account);
+
+    void onFolderCacheLoadFinished();
+
+    void onNewMessageRecieved(QString email, QString folder, QList<ssize_t> uidList);
 
 private:
     void loadAccounts();
+
+    void loadCache();
+
+    void startSync();
 
 private:
     bool m_isAccountInit;
     bool m_hasMsgLoaded;
 
-    Settings *m_Settings;
+    Settings *m_settings;
     FolderListModel *m_folderListModel;
     SortModel *m_messageListModel;
     MessageItem *m_messageItem;
     AttachmentModel *m_attachmentListModel;
     FolderHandler *m_folderHandler;
+    MessageHandler *m_messageHandler;
     SyncManager *m_syncManager;
 };
 

@@ -90,7 +90,7 @@ void MessageListModel::appendRows(QList<Message *> *messageList)
     endInsertRows();
 }
 
-void MessageListModel::onFolderSelected(QHash<Account *, Folder *> *accountFolder)
+void MessageListModel::onFolderSelected(QHash<Account *, QString> *accountFolder)
 {
     beginResetModel();
 
@@ -132,16 +132,9 @@ void MessageListModel::onDeleteMessage(QModelIndexList indexList)
 
 void MessageListModel::onMessageLoadFinished()
 {
-    QMap<QString, QList<Message *> *> message = m_messageHandler->messages();
+    QList<Message *> *message = m_messageHandler->messages();
 
-    QMapIterator<QString, QList<Message *> *> iter(message);
-
-    while (iter.hasNext()) {
-        iter.next();
-        QList<Message *> *messageList = iter.value();
-
-        appendRows(messageList);
-    }
+    appendRows(message);
 }
 
 QString MessageListModel::parseDate(const QDateTime &datetime) const
@@ -174,35 +167,35 @@ void MessageListModel::_deleteMessages(QModelIndexList indexList)
 
     auto messageList = QList<Message *>();
 
-    for (auto index : indexList) {
-        Message *message = m_messageList->at(index.row());
-        ssize_t uid = message->uid();
-        QString accountEmail = message->accountEmail();
-        QString folderName = folders[uid];
+    //    for (auto index : indexList) {
+    //        Message *message = m_messageList->at(index.row());
+    //        ssize_t uid = message->uid();
+    //        QString accountEmail = message->accountEmail();
+    //        QString folderName = folders[uid];
 
-        if (!deleteUids->contains(folderName + " - " + accountEmail)) {
-            deleteUids->insert(folderName + " - " + accountEmail, QList<ssize_t>());
-        }
+    //        if (!deleteUids->contains(folderName + " - " + accountEmail)) {
+    //            deleteUids->insert(folderName + " - " + accountEmail, QList<ssize_t>());
+    //        }
 
-        QList<ssize_t> uidList = deleteUids->value(folderName);
-        uidList.append(uid);
-        deleteUids->insert(folderName + " - " + accountEmail, uidList);
-        messageList.append(message);
-    }
+    //        QList<ssize_t> uidList = deleteUids->value(folderName);
+    //        uidList.append(uid);
+    //        deleteUids->insert(folderName + " - " + accountEmail, uidList);
+    //        messageList.append(message);
+    //    }
 
-    QMapIterator<QString, QList<ssize_t>> deleteUidIter(*deleteUids);
-    while (deleteUidIter.hasNext()) {
-        deleteUidIter.next();
+    //    QMapIterator<QString, QList<ssize_t>> deleteUidIter(*deleteUids);
+    //    while (deleteUidIter.hasNext()) {
+    //        deleteUidIter.next();
 
-        QList<QString> splits = deleteUidIter.key().split(" - ");
-        QString folderName = splits.at(0);
-        QString accountEmail = splits.at(1);
-        QList<ssize_t> uidList = deleteUidIter.value();
+    //        QList<QString> splits = deleteUidIter.key().split(" - ");
+    //        QString folderName = splits.at(0);
+    //        QString accountEmail = splits.at(1);
+    //        QList<ssize_t> uidList = deleteUidIter.value();
 
-        Account *account = Session::getInstance()->getAccount(accountEmail);
-        ImapService *imapService = account->IMAPService();
-        imapService->deleteMessage(folderName, uidList);
-    }
+    //        Account *account = Session::getInstance()->getAccount(accountEmail);
+    //        ImapService *imapService = account->IMAPService();
+    //        imapService->deleteMessage(folderName, uidList);
+    //    }
 
     //    emit deleteMessages(indexList);
 }
@@ -211,34 +204,34 @@ void MessageListModel::_moveMessages(QModelIndexList indexList, const QString &d
 {
     auto *moveUids = new QMap<QString, QList<ssize_t>>();
 
-    for (auto index : indexList) {
-        Message *message = m_messageList->at(index.row());
-        ssize_t uid = message->uid();
-        QString accountEmail = message->accountEmail();
-        QString folderName = folders[uid];
+    //    for (auto index : indexList) {
+    //        Message *message = m_messageList->at(index.row());
+    //        ssize_t uid = message->uid();
+    //        QString accountEmail = message->accountEmail();
+    //        QString folderName = folders[uid];
 
-        if (!moveUids->contains(folderName + " - " + accountEmail)) {
-            moveUids->insert(folderName + " - " + accountEmail, QList<ssize_t>());
-        }
+    //        if (!moveUids->contains(folderName + " - " + accountEmail)) {
+    //            moveUids->insert(folderName + " - " + accountEmail, QList<ssize_t>());
+    //        }
 
-        QList<ssize_t> uidList = moveUids->value(folderName);
-        uidList.append(uid);
-        moveUids->insert(folderName + " - " + accountEmail, uidList);
-    }
+    //        QList<ssize_t> uidList = moveUids->value(folderName);
+    //        uidList.append(uid);
+    //        moveUids->insert(folderName + " - " + accountEmail, uidList);
+    //    }
 
-    QMapIterator<QString, QList<ssize_t>> moveUidIter(*moveUids);
-    while (moveUidIter.hasNext()) {
-        moveUidIter.next();
-        QList<QString> splits = moveUidIter.key().split(" - ");
+    //    QMapIterator<QString, QList<ssize_t>> moveUidIter(*moveUids);
+    //    while (moveUidIter.hasNext()) {
+    //        moveUidIter.next();
+    //        QList<QString> splits = moveUidIter.key().split(" - ");
 
-        QString folderName = splits.at(0);
-        QString accountEmail = splits.at(1);
-        QList<ssize_t> uidList = moveUidIter.value();
+    //        QString folderName = splits.at(0);
+    //        QString accountEmail = splits.at(1);
+    //        QList<ssize_t> uidList = moveUidIter.value();
 
-        Account *account = Session::getInstance()->getAccount(accountEmail);
-        ImapService *imapService = account->IMAPService();
-        imapService->moveMessage(folderName, destDir, uidList);
-    }
+    //        Account *account = Session::getInstance()->getAccount(accountEmail);
+    //        ImapService *imapService = account->IMAPService();
+    //        imapService->moveMessage(folderName, destDir, uidList);
+    //    }
 }
 
 void MessageListModel::setMessageHandler(MessageHandler *newMessageHandler)
@@ -255,7 +248,7 @@ void MessageListModel::selectMessage(QModelIndex index)
     Message *msg = m_messageList->at(row);
     Account *account = Session::getInstance()->getAccount(msg->accountEmail());
 
-    m_messageHandler->fetchMessage(account, msg->folder(), msg->uid());
+    //    m_messageHandler->fetchMessage(account, msg->folder(), msg->uid());
 }
 
 bool MessageListModel::loading() const

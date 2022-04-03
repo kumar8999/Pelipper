@@ -3,6 +3,7 @@
 
 #include "account.h"
 #include "session.h"
+#include "settings.h"
 
 #include <QMap>
 #include <QObject>
@@ -15,35 +16,42 @@ class SyncManager : public QObject
 public:
     explicit SyncManager(QObject *parent = nullptr);
 
-    bool isFolderThreadRunning();
+    void loadCache(Account *account);
 
-    void fetchHeaders(QHash<Account *, Folder *> *accountFolder);
+    bool isCacheThreadRunning();
 
-    void fetchMessages(Account *account, const QString &foldername, const ssize_t &uid);
+    void fetchHeaders(QHash<Account *, QString> *accountFolder);
+
+    void fetchHeaders(Account *account, QString folder);
+
+    void startSync();
+
+    void startCache();
 
 signals:
-    void foldersReadFinished(Account *account, QList<Folder *> *folders);
+    void foldersReadFinished(Account *account, QList<Folder *> *folderList);
 
-    void messagesReadFinished(QMap<QString, QList<Message *> *> messages);
+    void messagesReadFinished(Account *account, const QString &folder, QList<Message *> *msgList);
 
-    void messageReadFinished(Account *account, Message *message);
+    void newUidList(QString email, QString folder, QList<ssize_t> uidList);
 
 private slots:
-    void onAccountAdded(Account *account);
+    void onWorkerFoldersReadFinished(QList<Folder *> *folderList);
 
-    void onWorkerFolderReadFinished(QList<Folder *> *folders);
+    void onCachedUidListReadFinished(const QList<ssize_t> &uidList);
 
-    void onWorkerMessagesReadFinished(QList<Message *> *messages);
+    void onFetchedUidListReadFinished(QString folder, const QList<ssize_t> &uidList);
 
-    void onWorkerMessageReadFinished(Message *msg);
+    void onWorkerMessagesReadFinished(QList<Message *> *msgList);
 
 private:
-    QThread *m_messageThread;
+    void cancelAllMessageThread();
 
-    QMap<QString, QThread *> m_folderThread;
+private:
+    QMap<QString, QThread *> m_cacheThread;
     QMap<QString, QThread *> m_messagesThread;
 
-    QList<Account *> m_accounts;
+    QMap<QString, QList<ssize_t>> m_uidList;
 };
 
 #endif // SYNCMANAGER_H

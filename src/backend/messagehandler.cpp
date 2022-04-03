@@ -6,44 +6,35 @@ MessageHandler::MessageHandler(QObject *parent)
     : QObject{parent}
 {
     m_syncmanager = nullptr;
+    m_messages = new QList<Message *>();
 }
 
-void MessageHandler::fetchHeaders(QHash<Account *, Folder *> *accountFolder)
+SyncManager *MessageHandler::syncmanager() const
 {
-    m_syncmanager->fetchHeaders(accountFolder);
-}
-
-void MessageHandler::fetchMessage(Account *account, const QString &foldername, const ssize_t &uid)
-{
-    m_syncmanager->fetchMessages(account, foldername, uid);
+    return m_syncmanager;
 }
 
 void MessageHandler::setSyncmanager(SyncManager *newSyncmanager)
 {
     m_syncmanager = newSyncmanager;
 
-    connect(m_syncmanager, &SyncManager::messagesReadFinished, this, &MessageHandler::onMessagesReadFinished);
+    connect(m_syncmanager, &SyncManager::messagesReadFinished, this, &MessageHandler::onMessageReadFinished);
 }
 
-void MessageHandler::clearAllMessages()
+void MessageHandler::fetchHeaders(QHash<Account *, QString> *accountFolder)
 {
-    m_messages.clear();
+    qDebug() << "fetching headers";
+    m_messages->clear();
+    m_syncmanager->fetchHeaders(accountFolder);
 }
 
-void MessageHandler::onMessagesReadFinished(QMap<QString, QList<Message *> *> messages)
+void MessageHandler::onMessageReadFinished(Account *account, const QString &folder, QList<Message *> *msgList)
 {
-    QMapIterator<QString, QList<Message *> *> messageIter(messages);
-
-    while (messageIter.hasNext()) {
-        messageIter.next();
-
-        m_messages[messageIter.key()] = messageIter.value();
-    }
-
+    m_messages->append(*msgList);
     emit messageLoadFinished();
 }
 
-const QMap<QString, QList<Message *> *> &MessageHandler::messages() const
+QList<Message *> *MessageHandler::messages() const
 {
     return m_messages;
 }

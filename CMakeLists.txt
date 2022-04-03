@@ -42,7 +42,6 @@ set(PROJECT_SOURCES
     src/folderview/accountitem.h src/folderview/accountitem.cpp
     src/folderview/basefolderitem.h src/folderview/basefolderitem.cpp
     src/folderview/folderlistmodel.h src/folderview/folderlistmodel.cpp
-    src/backend/contact.h src/backend/contact.cpp
     src/backend/flags.h src/backend/flags.cpp
     src/backend/address.h src/backend/address.cpp
     src/backend/messagehandler.h src/backend/messagehandler.cpp

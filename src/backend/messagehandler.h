@@ -13,29 +13,23 @@ class MessageHandler : public QObject
 public:
     explicit MessageHandler(QObject *parent = nullptr);
 
-    void deleteMessages();
-
-    void fetchHeaders(QHash<Account *, Folder *> *accountFolder);
-
-    void fetchMessage(Account *account, const QString &foldername, const ssize_t &uid);
-
+    SyncManager *syncmanager() const;
     void setSyncmanager(SyncManager *newSyncmanager);
 
-    void clearAllMessages();
+    void fetchHeaders(QHash<Account *, QString> *accountFolder);
 
-    const QMap<QString, QList<Message *> *> &messages() const;
+    QList<Message *> *messages() const;
 
 signals:
-
     void messageLoadFinished();
 
 private slots:
-    void onMessagesReadFinished(QMap<QString, QList<Message *> *> messages);
+    void onMessageReadFinished(Account *account, const QString &folder, QList<Message *> *msgList);
 
 private:
     SyncManager *m_syncmanager;
 
-    QMap<QString, QList<Message *> *> m_messages;
+    QList<Message *> *m_messages;
 };
 
 #endif // MESSAGEHANDLER_H

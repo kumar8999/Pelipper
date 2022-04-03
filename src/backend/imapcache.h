@@ -16,7 +16,13 @@ public:
 
     QList<Folder *> *getFolders();
 
+    QStringList fetchFoldersStr();
+
+    bool insertFoldersStr(const QStringList &folderList);
+
     bool insertFolders(const QList<Folder *> &folderList);
+
+    void insertUidList(const QString &foldername, const QList<ssize_t> &uidList);
 
     QList<ssize_t> getUidList(const QString &foldername);
 
@@ -37,10 +43,13 @@ public:
     QString getParentFolderName(const QString &fullfoldername, const QChar &delimter);
 
 private:
+    QJsonObject insertFolderObj(Folder *folder);
+
+    Folder *getFolderObj(QJsonObject obj);
+
+private:
     QString m_Email;
-    QString m_CacheFolderPath;
-    QMutex m_Mutex;
-    QSettings *m_Settings;
+    QString m_cacheFilePath;
 };
 
 #endif // IMAPCACHE_H

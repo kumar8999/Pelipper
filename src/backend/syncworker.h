@@ -11,43 +11,44 @@ class SyncWorker : public QObject
 public:
     explicit SyncWorker(QObject *parent = nullptr);
 
-    Account *account() const;
-
-    void setAccount(Account *newAccount);
+    void loadCacheFolders();
 
     void fetchFolders();
 
-    void fetchHeaders();
+    void fetchCacheFolders();
 
-    void fetchMessage();
+    void setAccount(Account *newAccount);
+
+    Account *account() const;
+
+    void fetchHeaders();
 
     void setSelectedFolder(const QString &newSelectedFolder);
 
-signals:
+    void syncFolders();
 
+    void syncFolder(QString folder);
+
+    const QString &getSelectedFolder() const;
+
+signals:
     void foldersReadFinished(QList<Folder *> *folders);
 
-    void messagesReadFinished(QList<Message *> *messages);
+    void messagesReadFinished(QList<Message *> *msgList);
 
-    void messageReadFinished(Message *msg);
+    void cacheMessageReadFinished(QList<ssize_t> uidList);
+
+    void cachedUidList(QList<ssize_t> uidList);
+
+    void fetchedUidList(QString folder, QList<ssize_t> uidList);
 
 private:
-    void loadcacheFolders();
-
-    void loadcacheMessages(const QString &folder);
-
-    void loadFolders();
-
-    void loadMessages(const QString &folder, const FetchType &fetchType);
-
-    void loadMessage(const QString &folder, const ssize_t &uid);
-
 private:
     Account *m_account;
 
-    QString m_selectedFolder;
+    ImapService *m_imapService;
 
-    ssize_t m_uid;
+    QString selectedFolder;
 };
 
 #endif // SYNCWORKER_H

@@ -24,32 +24,25 @@ public:
 
     ~Account();
 
-    ImapService *IMAPService() const;
-
     const QString &Email() const;
-
-    IdleManager *idleManager() const;
 
     SmtpService *SMTPService() const;
 
-    ImapService *idleService() const;
-
-    ImapService *createIdleService();
-
     ImapCache *cacheService() const;
+
+    ImapService *createImapService();
 
 private:
     QString m_Username;
-    QString m_Email;
-    QString m_Password;
-    QString m_ImapServer;
+    QString m_email;
+    QString m_password;
+    QString m_imapServer;
     QString m_SmtpServer;
-    int m_ImapPort;
+    int m_imapPort;
     int m_SmtpPort;
 
-    ImapService *m_ImapService;
-    ImapService *m_idleService;
-    IdleManager *m_IdleManager;
+    QList<ImapService *> m_imapServices;
+
     SmtpService *m_SmtpService;
     ImapCache *m_cacheService;
 };

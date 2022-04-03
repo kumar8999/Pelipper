@@ -1,7 +1,7 @@
 #ifndef SMTPSERVICE_H
 #define SMTPSERVICE_H
 
-#include "contact.h"
+#include "address.h"
 
 #include <libetpan/libetpan.h>
 
@@ -21,15 +21,15 @@ public:
 
     bool Send(const QString &subject,
               const QString &htmlMessage,
-              const QList<Contact> &to,
-              const QList<Contact> &cc,
-              const QList<Contact> &bcc,
+              const QList<Address> &to,
+              const QList<Address> &cc,
+              const QList<Address> &bcc,
               const QStringList &attachmentPaths);
 
 private:
-    bool SendMessage(const QString &data, const QList<Contact> &recipientList);
+    bool SendMessage(const QString &data, const QList<Address> &recipientList);
 
-    mailimf_address_list *createAddressField(QList<Contact> contactList);
+    mailimf_address_list *createAddressField(QList<Address> contactList);
 
     QString getMimeType(const QString &filePath);
 

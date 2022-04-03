@@ -12,7 +12,15 @@
 
 enum ConnectionType { ConnectionTypeNone, ConnectionTypeStartTLS, ConnectionSSL };
 
-enum FetchType { Header = 1 << 0, Body = 1 << 1, BodyWithNoSeen = 1 << 2, Flag = 1 << 3, All = Header | Body | Flag, AllWithNoSeen = Header | Body | Flag };
+enum FetchType {
+    None = 1 << 0,
+    Header = 1 << 1,
+    Body = 1 << 2,
+    BodyWithNoSeen = 1 << 3,
+    Flag = 1 << 4,
+    All = Header | Body | Flag,
+    AllWithNoSeen = Header | Body | Flag
+};
 
 class ImapService : public QObject
 {
@@ -34,7 +42,9 @@ public:
 
     bool selectFolder(const QString &folderName);
 
-    QList<Folder *> *getFolders(QStringList &folderListstr);
+    QList<Folder *> *getFolders();
+
+    QStringList fetchFoldersStringList();
 
     QList<ssize_t> getUids(const QString &foldername);
 
@@ -53,6 +63,7 @@ public:
     bool moveMessage(const QString &souceFolderName, const QString &destFolderName, QList<ssize_t> uidList);
 
     int idleStart(const QString &foldername);
+
     bool idleDone();
 
 private:

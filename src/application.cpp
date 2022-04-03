@@ -10,7 +10,7 @@ Application::Application(QObject *parent)
     , m_hasMsgLoaded(false)
     , QObject(parent)
 {
-    m_Settings = new Settings(this);
+    m_settings = new Settings(this);
     m_folderListModel = new FolderListModel(this);
     m_folderHandler = new FolderHandler(this);
     m_folderListModel->setFolderhandler(m_folderHandler);
@@ -18,25 +18,22 @@ Application::Application(QObject *parent)
     m_folderHandler->setSyncmanager(m_syncManager);
 
     MessageListModel *_messageListModel = new MessageListModel(this);
-    MessageHandler *messageHandler = new MessageHandler(this);
-    _messageListModel->setMessageHandler(messageHandler);
-    messageHandler->setSyncmanager(m_syncManager);
+    m_messageHandler = new MessageHandler(this);
+    _messageListModel->setMessageHandler(m_messageHandler);
+    m_messageHandler->setSyncmanager(m_syncManager);
 
     m_messageListModel = new SortModel(this);
     m_messageListModel->setModel(_messageListModel);
     m_messageListModel->setSortRole(Roles::DateRole);
     m_messageListModel->sort(0, Qt::DescendingOrder);
 
-    //    m_attachmentListModel = new AttachmentModel(this);
+    connect(m_syncManager, &SyncManager::newUidList, this, &Application::onNewMessageRecieved);
+
+    connect(m_folderHandler, &FolderHandler::folderLoadCacheFinished, this, &Application::onFolderCacheLoadFinished);
 
     connect(m_folderListModel, &FolderListModel::folderSelected, _messageListModel, &MessageListModel::onFolderSelected);
 
     connect(this, &Application::messageReadReady, this, [=](Message *msg) {
-        setMessageItem(new MessageItem(msg, this));
-        setHasMsgLoaded(true);
-    });
-
-    connect(m_syncManager, &SyncManager::messageReadFinished, this, [=](Account *account, Message *msg) {
         setMessageItem(new MessageItem(msg, this));
         setHasMsgLoaded(true);
     });
@@ -49,7 +46,7 @@ Application::~Application()
     delete m_folderListModel;
     delete m_messageListModel;
     delete m_attachmentListModel;
-    delete m_Settings;
+    delete m_settings;
 
     if (m_messageItem != nullptr)
         delete m_messageItem;
@@ -83,7 +80,7 @@ void Application::setIsAccountInit(bool newIsAccountInit)
 
 void Application::loadAccounts()
 {
-    QStringList accounts = m_Settings->getAccountIds();
+    QStringList accounts = m_settings->getAccountIds();
 
     for (const auto &accountId : qAsConst(accounts)) {
         QString username;
@@ -93,14 +90,14 @@ void Application::loadAccounts()
         int imapPort;
         QString smtpServer;
         int smtpPort;
-        bool isOK = m_Settings->getAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
+        bool isOK = m_settings->getAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
 
         if (!isOK) {
             continue;
         }
 
         Account *account = new Account(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
-        ImapService *accountService = account->IMAPService();
+        ImapService *accountService = account->createImapService();
 
         // if not connected or log in show an error message and dialog to rewrite details
 
@@ -109,6 +106,21 @@ void Application::loadAccounts()
         Session::getInstance()->addAccount(account);
         setIsAccountInit(true);
     }
+
+    loadCache();
+    //    startSync();
+}
+
+void Application::loadCache()
+{
+    qDebug() << "loading folder cache";
+    m_folderHandler->loadCache();
+}
+
+void Application::startSync()
+{
+    qDebug() << "staring sync";
+    m_syncManager->startSync();
 }
 
 AttachmentModel *Application::attachmentListModel() const
@@ -156,7 +168,7 @@ void Application::selectedMessage(const QString &accountEmail, const QString &fo
         Session *session = Session::getInstance();
         Account *account = session->getAccount(accountEmail);
 
-        ImapService *imapService = account->IMAPService();
+        ImapService *imapService = account->createImapService();
         Message *msg = imapService->getBody(uid);
 
         emit messageReadReady(msg);
@@ -176,31 +188,31 @@ void Application::sendMessage(const QString &from,
         Account *account = session->getAccount(from);
         SmtpService *smtpService = account->SMTPService();
 
-        QStringList toList = to.split(",");
-        QList<Contact> toContactList;
+        //        QStringList toList = to.split(",");
+        //        QList<Contact> toContactList;
 
-        for (auto i = 0; i < toList.length(); i++) {
-            Contact contact(toList.at(i));
-            toContactList.append(contact);
-        }
+        //        for (auto i = 0; i < toList.length(); i++) {
+        //            Contact contact(toList.at(i));
+        //            toContactList.append(contact);
+        //        }
 
-        QStringList ccList = cc.split(",");
-        QList<Contact> ccContactList;
+        //        QStringList ccList = cc.split(",");
+        //        QList<Contact> ccContactList;
 
-        for (auto i = 0; i < ccList.length(); i++) {
-            Contact contact(ccList.at(i));
-            ccContactList.append(contact);
-        }
+        //        for (auto i = 0; i < ccList.length(); i++) {
+        //            Contact contact(ccList.at(i));
+        //            ccContactList.append(contact);
+        //        }
 
-        QStringList bccList = cc.split(",");
-        QList<Contact> bccContactList;
+        //        QStringList bccList = cc.split(",");
+        //        QList<Contact> bccContactList;
 
-        for (auto i = 0; i < bccList.length(); i++) {
-            Contact contact(bccList.at(i));
-            bccContactList.append(contact);
-        }
+        //        for (auto i = 0; i < bccList.length(); i++) {
+        //            Contact contact(bccList.at(i));
+        //            bccContactList.append(contact);
+        //        }
 
-        smtpService->Send(subject, msg, toContactList, ccContactList, bccContactList, attachments);
+        //        smtpService->Send(subject, msg, toContactList, ccContactList, bccContactList, attachments);
     });
 }
 
@@ -226,7 +238,7 @@ void Application::addAccount(const QString &username,
                              const int &smtpPort)
 {
     Account *account = new Account(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
-    ImapService *accountService = account->IMAPService();
+    ImapService *accountService = account->createImapService();
 
     bool result = accountService->connect();
 
@@ -236,7 +248,7 @@ void Application::addAccount(const QString &username,
         result = accountService->login();
         if (result) {
             Session::getInstance()->addAccount(account);
-            m_Settings->saveAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
+            m_settings->saveAccountSettings(username, email, password, imapServer, imapPort, smtpServer, smtpPort);
             setIsAccountInit(true);
             emit loginSuccessFul(true);
         } else {
@@ -260,7 +272,25 @@ QStringList Application::accountEmail()
     return accountEmail;
 }
 
-void Application::onAccountAdded(Account *account)
+void Application::onFolderCacheLoadFinished()
 {
-    //    account->startCacheService();
+    QString email;
+    QString selectedFolder;
+    m_settings->getSelectedFolder(email, selectedFolder);
+
+    if (email != "" && selectedFolder != "" && Session::getInstance()->getAccount(email) != nullptr) {
+        qDebug() << "selected " << selectedFolder << "from " << email;
+        QHash<Account *, QString> *accountFolder = new QHash<Account *, QString>();
+        Account *account = Session::getInstance()->getAccount(email);
+        accountFolder->insert(account, selectedFolder);
+        m_messageHandler->fetchHeaders(accountFolder);
+        //        m_messageHandler->loadCache(Session::getInstance()->getAccount(email), selectedFolder);
+    } else {
+        qDebug() << "no selected folder";
+    }
+}
+
+void Application::onNewMessageRecieved(QString email, QString folder, QList<ssize_t> uidList)
+{
+    qDebug() << "new messages from" << email << "in" << folder;
 }

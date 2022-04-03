@@ -48,10 +48,12 @@ bool ImapService::selectFolder(const QString &folderName)
 {
     int r = mailimap_select(m_imap, folderName.toStdString().c_str());
 
+    qDebug() << "selected folder" << folderName << r;
+
     return r == MAILIMAP_NO_ERROR;
 }
 
-QList<Folder *> *ImapService::getFolders(QStringList &folderListstr)
+QList<Folder *> *ImapService::getFolders()
 {
     QMutexLocker locker(&m_mutex);
 
@@ -73,7 +75,6 @@ QList<Folder *> *ImapService::getFolders(QStringList &folderListstr)
         if (mblist) {
             const std::string &foldername = std::string(mblist->mb_name);
             folderMap[QString::fromStdString(foldername)] = mblist;
-            folderListstr.append(QString::fromStdString(foldername));
         }
     }
 
@@ -106,6 +107,35 @@ QList<Folder *> *ImapService::getFolders(QStringList &folderListstr)
     return folderList;
 }
 
+QStringList ImapService::fetchFoldersStringList()
+{
+    QMutexLocker locker(&m_mutex);
+
+    clist *list = NULL;
+
+    int r = mailimap_list(m_imap, "", "*", &list);
+
+    if (r != MAILIMAP_NO_ERROR) {
+        qDebug() << "Could not fetch folder list";
+        qDebug() << "Errorcode: " << r;
+        return QStringList();
+    }
+
+    QStringList folderListstr;
+
+    for (clistiter *it = clist_begin(list); it != NULL; it = it->next) {
+        mailimap_mailbox_list *mblist = (mailimap_mailbox_list *)clist_content(it);
+        if (mblist) {
+            const std::string &foldername = std::string(mblist->mb_name);
+            folderListstr.append(QString::fromStdString(foldername));
+        }
+    }
+
+    mailimap_list_result_free(list);
+
+    return folderListstr;
+}
+
 QList<ssize_t> ImapService::getUids(const QString &foldername)
 {
     int r;
@@ -128,7 +158,6 @@ QList<ssize_t> ImapService::getUids(const QString &foldername)
         return QList<ssize_t>();
     }
 
-    //    }
     QList<ssize_t> uidList;
 
     for (clistiter *it = clist_begin(fetchResult); it != NULL; it = clist_next(it)) {
@@ -419,18 +448,19 @@ QList<Message *> *ImapService::fetchMessage(const QString &foldername, const QLi
         return nullptr;
     }
 
-    section = mailimap_section_new(NULL);
-    set = mailimap_set_new_empty();
+    set = mailimap_set_new_interval(0, 1);
     mailimapfetchType = mailimap_fetch_type_new_fetch_att_list_empty();
     mailimap_fetch_type_new_fetch_att_list_add(mailimapfetchType, mailimap_fetch_att_new_uid());
 
     if (fetchType & FetchType::Body) {
         mailimap_fetch_att *fetchAtt;
-        fetchAtt = mailimap_fetch_att_new_body_peek_section(section);
+        section = mailimap_section_new(NULL);
+        fetchAtt = mailimap_fetch_att_new_body_section(section);
         mailimap_fetch_type_new_fetch_att_list_add(mailimapfetchType, fetchAtt);
     }
     if (fetchType & FetchType::BodyWithNoSeen) {
         mailimap_fetch_att *fetchAtt;
+        section = mailimap_section_new(NULL);
         fetchAtt = mailimap_fetch_att_new_body_peek_section(section);
         mailimap_fetch_type_new_fetch_att_list_add(mailimapfetchType, fetchAtt);
     }
@@ -443,8 +473,10 @@ QList<Message *> *ImapService::fetchMessage(const QString &foldername, const QLi
         mailimap_fetch_type_new_fetch_att_list_add(mailimapfetchType, mailimap_fetch_att_new_flags());
     }
 
-    for (auto uid : uidList) {
-        mailimap_set_add_single(set, uid);
+    if (!uidList.isEmpty()) {
+        for (auto uid : uidList) {
+            mailimap_set_add_single(set, uid);
+        }
     }
 
     int r = mailimap_uid_fetch(m_imap, set, mailimapfetchType, &fetchResult);

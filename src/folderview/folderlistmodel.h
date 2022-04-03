@@ -34,7 +34,7 @@ public slots:
 signals:
     void loadingChanged();
 
-    void folderSelected(QHash<Account *, Folder *> *accountFolders);
+    void folderSelected(QHash<Account *, QString> *accountFolders);
 
 private slots:
     void onFoldersLoadFinished();

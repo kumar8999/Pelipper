@@ -1,4 +1,5 @@
 #include "folderhandler.h"
+#include "session.h"
 
 #include <QDebug>
 
@@ -24,4 +25,14 @@ void FolderHandler::onFolderReadFinished(Account *account, QList<Folder *> *fold
 const QMap<Account *, QList<Folder *> *> &FolderHandler::folders() const
 {
     return m_folders;
+}
+
+void FolderHandler::loadCache()
+{
+    Session *session = Session::getInstance();
+    QList<Account *> accounts = session->getAccounts();
+
+    for (auto account : qAsConst(accounts)) {
+        m_syncmanager->loadCache(account);
+    }
 }

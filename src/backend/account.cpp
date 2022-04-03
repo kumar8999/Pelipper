@@ -1,6 +1,6 @@
 #include "account.h"
 
-#include <QtConcurrent>
+#include <QDebug>
 
 Account::Account(const QString &username,
                  const QString &email,
@@ -11,42 +11,27 @@ Account::Account(const QString &username,
                  const int &smtpPort,
                  QObject *parent)
     : m_Username(username)
-    , m_Email(email)
-    , m_Password(password)
-    , m_ImapServer(imapServer)
-    , m_ImapPort(imapPort)
+    , m_email(email)
+    , m_password(password)
+    , m_imapServer(imapServer)
+    , m_imapPort(imapPort)
     , m_SmtpServer(smtpServer)
     , m_SmtpPort(smtpPort)
     , QObject(parent)
 {
-    m_ImapService = new ImapService(email, password, imapServer, imapPort, ConnectionType::ConnectionSSL);
-    m_SmtpService = new SmtpService(m_Username, m_Password, m_SmtpServer, m_SmtpPort, m_Email, 0, this);
-    //    m_IdleManager = new IdleManager(new ImapService(email, password, imapServer, imapPort, ConnectionType::ConnectionSSL));
+    m_SmtpService = new SmtpService(m_Username, m_password, m_SmtpServer, m_SmtpPort, m_email, 0, this);
 
-    m_cacheService = new ImapCache(m_Email);
-
-    //    m_IdleManager->start();
+    m_cacheService = new ImapCache(m_email);
 }
 
 Account::~Account()
 {
-    delete m_ImapService;
-    delete m_SmtpService;
-}
-
-ImapService *Account::IMAPService() const
-{
-    return m_ImapService;
+    qDebug() << "deleting account";
 }
 
 const QString &Account::Email() const
 {
-    return m_Email;
-}
-
-IdleManager *Account::idleManager() const
-{
-    return m_IdleManager;
+    return m_email;
 }
 
 SmtpService *Account::SMTPService() const
@@ -54,19 +39,14 @@ SmtpService *Account::SMTPService() const
     return m_SmtpService;
 }
 
-ImapService *Account::idleService() const
-{
-    return m_idleService;
-}
-
-ImapService *Account::createIdleService()
-{
-    m_idleService = new ImapService(m_Email, m_Password, m_ImapServer, m_ImapPort, ConnectionType::ConnectionSSL);
-
-    return m_idleService;
-}
-
 ImapCache *Account::cacheService() const
 {
     return m_cacheService;
+}
+
+ImapService *Account::createImapService()
+{
+    ImapService *imapService = new ImapService(m_email, m_password, m_imapServer, m_imapPort, ConnectionType::ConnectionSSL);
+    //    m_imapServices.append(imapService);
+    return imapService;
 }

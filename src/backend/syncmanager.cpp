@@ -6,21 +6,32 @@
 #include <QThread>
 
 SyncManager::SyncManager(QObject *parent)
-    : QObject{parent}
+    : QObject(parent)
 {
-    auto *session = Session::getInstance();
-    m_accounts = session->getAccounts();
-    connect(session, &Session::accountAdded, this, &SyncManager::onAccountAdded);
 }
 
-bool SyncManager::isFolderThreadRunning()
+void SyncManager::loadCache(Account *account)
 {
-    QMapIterator<QString, QThread *> mapIter(m_folderThread);
+    SyncWorker *worker = new SyncWorker(this);
+    QThread *thread = new QThread(this);
 
-    while (mapIter.hasNext()) {
-        mapIter.next();
+    m_cacheThread[account->Email()] = thread;
 
-        if (mapIter.value()->isRunning()) {
+    worker->setAccount(account);
+    connect(thread, &QThread::started, worker, &SyncWorker::fetchCacheFolders);
+    connect(worker, &SyncWorker::foldersReadFinished, this, &SyncManager::onWorkerFoldersReadFinished);
+
+    thread->start();
+}
+
+bool SyncManager::isCacheThreadRunning()
+{
+    QMapIterator<QString, QThread *> iter(m_cacheThread);
+
+    while (iter.hasNext()) {
+        iter.hasNext();
+
+        if (iter.next().value()->isRunning()) {
             return true;
         }
     }
@@ -28,85 +39,105 @@ bool SyncManager::isFolderThreadRunning()
     return false;
 }
 
-void SyncManager::fetchHeaders(QHash<Account *, Folder *> *accountFolder)
+void SyncManager::fetchHeaders(QHash<Account *, QString> *accountFolder)
 {
-    QHashIterator<Account *, Folder *> accountFolderIter(*accountFolder);
+    cancelAllMessageThread();
 
-    while (accountFolderIter.hasNext()) {
-        accountFolderIter.next();
+    QHashIterator<Account *, QString> iter(*accountFolder);
 
-        Account *account = accountFolderIter.key();
-        Folder *folder = accountFolderIter.value();
+    while (iter.hasNext()) {
+        iter.next();
 
-        QThread *thread = m_messagesThread[account->Email()];
+        m_messagesThread[iter.key()->Email()] = new QThread();
 
-        if (thread != nullptr) {
-            thread->quit();
-        }
-
-        thread = new QThread();
-        m_messagesThread[account->Email()] = thread;
-
-        SyncWorker *worker = new SyncWorker();
-        worker->setAccount(account);
-        worker->setSelectedFolder(folder->FullName());
-        connect(thread, &QThread::started, worker, &SyncWorker::fetchHeaders);
+        SyncWorker *worker = new SyncWorker(this);
+        worker->setAccount(iter.key());
+        worker->setSelectedFolder(iter.value());
+        connect(m_messagesThread[iter.key()->Email()], &QThread::started, worker, &SyncWorker::fetchHeaders);
         connect(worker, &SyncWorker::messagesReadFinished, this, &SyncManager::onWorkerMessagesReadFinished);
+
+        m_messagesThread[iter.key()->Email()]->start();
+    }
+}
+
+void SyncManager::startSync()
+{
+    QList<Account *> accounts = Session::getInstance()->getAccounts();
+
+    for (auto account : qAsConst(accounts)) {
+        SyncWorker *worker = new SyncWorker(this);
+        QThread *thread = new QThread(this);
+        worker->setAccount(account);
+        connect(thread, &QThread::started, worker, &SyncWorker::syncFolders);
+        connect(worker, &SyncWorker::cachedUidList, this, &SyncManager::onCachedUidListReadFinished);
+        connect(worker, &SyncWorker::fetchedUidList, this, &SyncManager::onFetchedUidListReadFinished);
+
         thread->start();
     }
 }
 
-void SyncManager::fetchMessages(Account *account, const QString &foldername, const ssize_t &uid)
+void SyncManager::startCache()
 {
-    if (m_messageThread != nullptr) {
-        m_messageThread->quit();
-        m_messageThread = nullptr;
+    QList<Account *> accounts = Session::getInstance()->getAccounts();
+
+    for (auto account : qAsConst(accounts)) {
+        //        SyncWorker *worker = new SyncWorker(this);
+        //        QThread *thread = new QThread(this);
+        //        worker->setAccount(account);
+        //        connect(thread, &QThread::started, worker, &SyncWorker::syncFolders);
+        //        connect(worker, &SyncWorker::cachedUidList, this, &SyncManager::onCachedUidListReadFinished);
+        //        connect(worker, &SyncWorker::fetchedUidList, this, &SyncManager::onFetchedUidListReadFinished);
+
+        //        thread->start();
     }
-
-    m_messageThread = new QThread();
-    SyncWorker *worker = new SyncWorker();
-    worker->setAccount(account);
-    worker->setSelectedFolder(foldername);
-    connect(m_messageThread, &QThread::started, worker, &SyncWorker::fetchMessage);
-    connect(worker, &SyncWorker::messageReadFinished, this, &SyncManager::onWorkerMessageReadFinished);
-    m_messageThread->start();
 }
 
-void SyncManager::onAccountAdded(Account *account)
+void SyncManager::onWorkerFoldersReadFinished(QList<Folder *> *folderList)
 {
-    QThread *thread = m_folderThread[account->Email()];
+    SyncWorker *worker = static_cast<SyncWorker *>(sender());
+    emit foldersReadFinished(worker->account(), folderList);
+}
 
-    if (thread == nullptr) {
-        thread = new QThread();
-        m_folderThread[account->Email()] = thread;
+void SyncManager::onCachedUidListReadFinished(const QList<ssize_t> &uidList)
+{
+    SyncWorker *worker = static_cast<SyncWorker *>(sender());
+    Account *account = worker->account();
+
+    m_uidList[account->Email()] = uidList;
+}
+
+void SyncManager::onFetchedUidListReadFinished(QString folder, const QList<ssize_t> &uidList)
+{
+    SyncWorker *worker = static_cast<SyncWorker *>(sender());
+    Account *account = worker->account();
+
+    QList<ssize_t> uids = m_uidList[account->Email()];
+    QSet<ssize_t> uidSet = QSet<ssize_t>(uids.begin(), uids.end());
+    QSet<ssize_t> uidListSet = QSet<ssize_t>(uidList.begin(), uidList.end());
+
+    QSet<ssize_t> newUid = uidListSet - uidSet;
+    emit newUidList(account->Email(), folder, QList<ssize_t>(newUid.begin(), newUid.end()));
+
+    m_uidList[account->Email()] = uidList;
+}
+
+void SyncManager::onWorkerMessagesReadFinished(QList<Message *> *msgList)
+{
+    SyncWorker *worker = static_cast<SyncWorker *>(sender());
+    Account *account = worker->account();
+
+    emit messagesReadFinished(account, worker->getSelectedFolder(), msgList);
+}
+
+void SyncManager::cancelAllMessageThread()
+{
+    QMapIterator<QString, QThread *> iter(m_messagesThread);
+
+    while (iter.hasNext()) {
+        iter.next();
+
+        if (iter.next().value()->isRunning()) {
+            iter.next().value()->quit();
+        }
     }
-
-    SyncWorker *worker = new SyncWorker();
-    worker->setAccount(account);
-
-    connect(thread, &QThread::started, worker, &SyncWorker::fetchFolders);
-    connect(worker, &SyncWorker::foldersReadFinished, this, &SyncManager::onWorkerFolderReadFinished);
-
-    thread->start();
-}
-
-void SyncManager::onWorkerFolderReadFinished(QList<Folder *> *folders)
-{
-    SyncWorker *worker = static_cast<SyncWorker *>(sender());
-    emit foldersReadFinished(worker->account(), folders);
-}
-
-void SyncManager::onWorkerMessagesReadFinished(QList<Message *> *messages)
-{
-    SyncWorker *worker = static_cast<SyncWorker *>(sender());
-    QMap<QString, QList<Message *> *> messagesMap;
-
-    messagesMap[worker->account()->Email()] = messages;
-    emit messagesReadFinished(messagesMap);
-}
-
-void SyncManager::onWorkerMessageReadFinished(Message *msg)
-{
-    SyncWorker *worker = static_cast<SyncWorker *>(sender());
-    emit messageReadFinished(worker->account(), msg);
 }

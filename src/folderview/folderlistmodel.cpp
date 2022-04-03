@@ -19,11 +19,11 @@ void FolderListModel::selectFolder(QModelIndex index)
 
         Account *account = item_->account();
 
-        QHash<Account *, Folder *> *accountFolder = new QHash<Account *, Folder *>();
+        QHash<Account *, QString> *accountFolder = new QHash<Account *, QString>();
 
         qDebug() << account->Email() << "account;";
 
-        accountFolder->insert(account, item_->folder());
+        accountFolder->insert(account, item_->folder()->FullName());
 
         m_settings->setSelectedFolder(account->Email(), item_->folder()->FullName());
 

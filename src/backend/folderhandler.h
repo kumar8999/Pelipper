@@ -15,8 +15,12 @@ public:
 
     const QMap<Account *, QList<Folder *> *> &folders() const;
 
+    void loadCache();
+
 signals:
     void folderReadFinished();
+
+    void folderLoadCacheFinished();
 
 private slots:
     void onFolderReadFinished(Account *account, QList<Folder *> *folders);
